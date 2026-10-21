@@ -2,7 +2,7 @@ package cl.pedidos360.ms_orders.client;
 
 import cl.pedidos360.ms_orders.dto.response.ProductResponse;
 import cl.pedidos360.ms_orders.dto.response.StandardResponse;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -10,10 +10,16 @@ import org.springframework.web.client.RestClient;
 import java.util.UUID;
 
 @Component
-@RequiredArgsConstructor
 public class CatalogClient {
 
     private final RestClient restClient;
+
+    public CatalogClient(RestClient.Builder restClientBuilder,
+                         @Value("${services.catalog.url:http://ms-catalog:8081}") String catalogServiceUrl) {
+        this.restClient = restClientBuilder
+                .baseUrl(catalogServiceUrl + "/api/v1/products")
+                .build();
+    }
 
     public ProductResponse findById(UUID productId) {
         StandardResponse<ProductResponse> response = restClient

@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 @Mapper(componentModel = "spring")
 public interface OrderItemMapper {
 
-    @Mapping(target = "subtotal", expression = "java(calculateSubtotal(enitity))")
+    @Mapping(target = "subtotal", expression = "java(calculateSubtotal(entity))")
     OrderItemResponse toResponse(OrderItemEntity entity);
 
     default BigDecimal calculateSubtotal(OrderItemEntity entity) {
