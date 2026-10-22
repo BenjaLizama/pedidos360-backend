@@ -21,24 +21,42 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * Manejador global de excepciones de ms-orders.
+ * Manejador global de excepciones del microservicio ms-orders.
  *
- * Centraliza el tratamiento de errores producidos por los controladores,
- * servicios y capa de persistencia, entregando respuestas HTTP consistentes
- * mediante StandardErrorResponse.
+ * <p>Centraliza el tratamiento de errores producidos durante la ejecución
+ * de las solicitudes HTTP, incluyendo errores de negocio, validaciones,
+ * operaciones de persistencia y excepciones inesperadas.</p>
  *
- * Las excepciones de autenticación y autorización son manejadas por
- * los componentes correspondientes de Spring Security.
+ * <p>Utiliza {@link RestControllerAdvice} para interceptar excepciones
+ * generadas por los controladores y construir respuestas HTTP consistentes
+ * mediante {@link StandardErrorResponse}.</p>
+ *
+ * <p>La construcción de las respuestas se delega a {@link ErrorResponseMapper},
+ * evitando duplicar la lógica de transformación de errores.</p>
+ *
+ * <p>Las excepciones de autenticación y autorización se gestionan mediante
+ * los componentes de seguridad configurados en Spring Security.</p>
  */
 @Slf4j
 @RestControllerAdvice
 @RequiredArgsConstructor
 public class GlobalExceptionHandler {
 
+    /**
+     * Componente encargado de transformar las excepciones y los errores
+     * en objetos de respuesta estandarizados.
+     */
     private final ErrorResponseMapper errorResponseMapper;
 
     /**
-     * Maneja recursos que no existen.
+     * Maneja las excepciones correspondientes a recursos inexistentes.
+     *
+     * <p>Registra la información de la solicitud y devuelve una respuesta
+     * HTTP 404 (Not Found) con el código y el mensaje de la excepción.</p>
+     *
+     * @param exception excepción que indica que el recurso solicitado no existe.
+     * @param request solicitud HTTP en la que se produjo el error.
+     * @return respuesta estandarizada con estado HTTP 404.
      */
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<StandardErrorResponse> handleResourceNotFound(
@@ -62,7 +80,14 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Maneja errores de negocio.
+     * Maneja las excepciones correspondientes a errores de negocio.
+     *
+     * <p>Registra el error y devuelve una respuesta HTTP 409 (Conflict),
+     * utilizando el código de error y el mensaje definidos en la excepción.</p>
+     *
+     * @param exception excepción que representa un error de negocio.
+     * @param request solicitud HTTP en la que se produjo el error.
+     * @return respuesta estandarizada con estado HTTP 409.
      */
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<StandardErrorResponse> handleBusinessException(
@@ -86,7 +111,15 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Maneja operaciones que no son válidas según las reglas del sistema.
+     * Maneja las excepciones producidas por operaciones que incumplen
+     * las reglas de negocio o las restricciones funcionales del sistema.
+     *
+     * <p>Devuelve una respuesta HTTP 409 (Conflict) con el código de error
+     * y el mensaje asociados a la excepción.</p>
+     *
+     * @param exception excepción que representa una operación inválida.
+     * @param request solicitud HTTP en la que se produjo el error.
+     * @return respuesta estandarizada con estado HTTP 409.
      */
     @ExceptionHandler(InvalidOperationException.class)
     public ResponseEntity<StandardErrorResponse> handleInvalidOperation(
@@ -110,7 +143,14 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Maneja recursos que ya existen.
+     * Maneja las excepciones que indican que un recurso ya existe.
+     *
+     * <p>Devuelve una respuesta HTTP 409 (Conflict) para indicar que
+     * la operación solicitada entra en conflicto con un recurso existente.</p>
+     *
+     * @param exception excepción que indica la existencia previa del recurso.
+     * @param request solicitud HTTP en la que se produjo el error.
+     * @return respuesta estandarizada con estado HTTP 409.
      */
     @ExceptionHandler(ResourceAlreadyExistsException.class)
     public ResponseEntity<StandardErrorResponse> handleResourceAlreadyExists(
@@ -134,7 +174,19 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Maneja errores de Bean Validation.
+     * Maneja los errores de validación generados por Bean Validation.
+     *
+     * <p>Recopila los errores asociados a los campos de la solicitud,
+     * organiza sus nombres mediante un {@link TreeMap} y conserva el primer
+     * mensaje registrado para cada campo.</p>
+     *
+     * <p>Delega la creación de la respuesta al mapper y devuelve el estado
+     * HTTP 400 (Bad Request).</p>
+     *
+     * @param exception excepción que contiene los errores de validación.
+     * @param request solicitud HTTP en la que se produjo el error.
+     * @return respuesta estandarizada con los errores de validación
+     *         y estado HTTP 400.
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<StandardErrorResponse> handleValidation(
@@ -173,8 +225,14 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Maneja parámetros que no pueden convertirse al tipo esperado,
-     * por ejemplo, un UUID con formato inválido.
+     * Maneja los errores de conversión de parámetros de una solicitud HTTP.
+     *
+     * <p>Se utiliza, por ejemplo, cuando un parámetro debe convertirse
+     * a UUID, pero su valor no tiene el formato esperado.</p>
+     *
+     * @param exception excepción que contiene el nombre del parámetro inválido.
+     * @param request solicitud HTTP en la que se produjo el error.
+     * @return respuesta estandarizada con estado HTTP 400.
      */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<StandardErrorResponse> handleTypeMismatch(
@@ -202,8 +260,15 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Maneja cuerpos JSON vacíos, mal formados o incompatibles
-     * con los tipos esperados.
+     * Maneja los errores de lectura o deserialización del cuerpo de una solicitud.
+     *
+     * <p>Se aplica cuando el cuerpo de la petición está vacío, contiene JSON
+     * mal formado o presenta datos que no pueden convertirse a los tipos
+     * esperados por la aplicación.</p>
+     *
+     * @param exception excepción producida al leer el cuerpo de la solicitud.
+     * @param request solicitud HTTP en la que se produjo el error.
+     * @return respuesta estandarizada con estado HTTP 400.
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<StandardErrorResponse> handleUnreadableMessage(
@@ -226,9 +291,15 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Maneja violaciones de integridad de la base de datos.
+     * Maneja las violaciones de restricciones de integridad de la base de datos.
      *
-     * No presupone que todas sean conflictos por duplicidad.
+     * <p>Registra la excepción completa para facilitar el diagnóstico y devuelve
+     * un mensaje genérico al consumidor de la API, sin asumir que el problema
+     * corresponde necesariamente a una duplicidad de datos.</p>
+     *
+     * @param exception excepción producida por una violación de integridad.
+     * @param request solicitud HTTP en la que se produjo el error.
+     * @return respuesta estandarizada con estado HTTP 409.
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<StandardErrorResponse> handleDataIntegrityViolation(
@@ -252,7 +323,15 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Maneja conflictos de concurrencia optimista.
+     * Maneja los conflictos detectados mediante control de concurrencia optimista.
+     *
+     * <p>Informa al consumidor que el recurso pudo haber sido modificado
+     * por otro proceso y que debe volver a consultarlo antes de reintentar
+     * la operación.</p>
+     *
+     * @param exception excepción que representa un conflicto de concurrencia.
+     * @param request solicitud HTTP en la que se produjo el error.
+     * @return respuesta estandarizada con estado HTTP 409.
      */
     @ExceptionHandler(OptimisticLockingFailureException.class)
     public ResponseEntity<StandardErrorResponse> handleOptimisticLockingFailure(
@@ -275,7 +354,16 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Maneja fallos de transacción.
+     * Maneja los errores producidos durante la ejecución o finalización
+     * de una transacción.
+     *
+     * <p>Registra la excepción para facilitar el diagnóstico y devuelve
+     * un mensaje genérico con estado HTTP 500, evitando exponer detalles
+     * internos de la transacción al consumidor.</p>
+     *
+     * @param exception excepción relacionada con la transacción.
+     * @param request solicitud HTTP en la que se produjo el error.
+     * @return respuesta estandarizada con estado HTTP 500.
      */
     @ExceptionHandler(TransactionSystemException.class)
     public ResponseEntity<StandardErrorResponse> handleTransactionException(
@@ -299,8 +387,15 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Fallback para excepciones no contempladas.
-     * Evita exponer detalles internos al consumidor de la API.
+     * Maneja las excepciones no contempladas por los demás métodos del handler.
+     *
+     * <p>Actúa como mecanismo de respaldo para errores inesperados,
+     * registra la excepción completa y delega la creación de la respuesta
+     * interna al {@link ErrorResponseMapper}.</p>
+     *
+     * @param exception excepción inesperada producida durante la solicitud.
+     * @param request solicitud HTTP en la que se produjo el error.
+     * @return respuesta estandarizada con estado HTTP 500.
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<StandardErrorResponse> handleUnexpectedException(
@@ -326,7 +421,16 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Construye una respuesta estandarizada.
+     * Construye una respuesta HTTP utilizando el formato estandarizado de errores.
+     *
+     * <p>Delega al mapper la creación del cuerpo de respuesta y establece
+     * el código HTTP proporcionado.</p>
+     *
+     * @param status estado HTTP que se devolverá al cliente.
+     * @param errorCode código de error asociado al problema.
+     * @param message mensaje descriptivo del error.
+     * @param request solicitud HTTP en la que se produjo el error.
+     * @return respuesta HTTP con su estado y cuerpo estandarizado.
      */
     private ResponseEntity<StandardErrorResponse> buildResponse(
             HttpStatus status,

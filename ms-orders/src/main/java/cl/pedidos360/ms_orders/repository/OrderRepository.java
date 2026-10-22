@@ -10,12 +10,23 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Repositorio para la persistencia y consulta de órdenes.
+ * Repositorio encargado de la persistencia y consulta de órdenes.
+ *
+ * <p>Extiende {@link JpaRepository} para disponer de las operaciones CRUD
+ * de Spring Data JPA y definir consultas personalizadas mediante los nombres
+ * de sus métodos.</p>
+ *
+ * <p>Permite consultar órdenes por cliente, identificador y estado,
+ * incluyendo resultados paginados.</p>
  */
 public interface OrderRepository extends JpaRepository<OrderEntity, UUID> {
 
     /**
-     * Consulta las órdenes de un cliente de forma paginada.
+     * Consulta las órdenes pertenecientes a un cliente de forma paginada.
+     *
+     * @param clientId identificador único del cliente.
+     * @param pageable configuración de paginación y ordenamiento.
+     * @return página con las órdenes del cliente.
      */
     Page<OrderEntity> findAllByClientId(
             UUID clientId,
@@ -23,7 +34,14 @@ public interface OrderRepository extends JpaRepository<OrderEntity, UUID> {
     );
 
     /**
-     * Busca una orden perteneciente a un cliente específico.
+     * Busca una orden por su identificador y el identificador de su cliente.
+     *
+     * <p>Permite verificar que la orden corresponda al cliente indicado.</p>
+     *
+     * @param id identificador único de la orden.
+     * @param clientId identificador único del cliente propietario de la orden.
+     * @return un {@link Optional} con la orden encontrada, o vacío si no existe
+     *         una coincidencia para ambos identificadores.
      */
     Optional<OrderEntity> findByIdAndClientId(
             UUID id,
@@ -31,7 +49,12 @@ public interface OrderRepository extends JpaRepository<OrderEntity, UUID> {
     );
 
     /**
-     * Consulta las órdenes de un cliente según su estado.
+     * Consulta las órdenes de un cliente filtradas por su estado.
+     *
+     * @param clientId identificador único del cliente.
+     * @param orderState estado por el que se desea filtrar las órdenes.
+     * @param pageable configuración de paginación y ordenamiento.
+     * @return página con las órdenes del cliente que coinciden con el estado.
      */
     Page<OrderEntity> findAllByClientIdAndOrderState(
             UUID clientId,
@@ -40,7 +63,11 @@ public interface OrderRepository extends JpaRepository<OrderEntity, UUID> {
     );
 
     /**
-     * Consulta las órdenes por estado.
+     * Consulta las órdenes que coinciden con un estado específico.
+     *
+     * @param orderState estado por el que se desea filtrar las órdenes.
+     * @param pageable configuración de paginación y ordenamiento.
+     * @return página con las órdenes que coinciden con el estado indicado.
      */
     Page<OrderEntity> findAllByOrderState(
             OrderStateEnum orderState,

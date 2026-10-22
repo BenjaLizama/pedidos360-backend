@@ -20,7 +20,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * Configuración de seguridad del microservicio de ordenes.
+ * Configuración de seguridad del microservicio de órdenes.
  *
  * <p>Configura la aplicación como un OAuth2 Resource Server que valida
  * tokens JWT emitidos por un proveedor de identidad externo.</p>
@@ -39,17 +39,40 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableConfigurationProperties(JwtProperties.class)
 public class SecurityConfig {
 
+    /**
+     * URI del conjunto de claves JSON Web Key Set (JWKS) utilizado para
+     * obtener las claves públicas con las que se verifican los tokens JWT.
+     */
     @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
     private String jwkSetUri;
 
+    /**
+     * Conversor encargado de transformar las reclamaciones del JWT
+     * en las autoridades de seguridad utilizadas por Spring Security.
+     */
     private final JwtAuthenticationConverter jwtAuthenticationConverter;
+
+    /**
+     * Manejador personalizado de errores de autenticación.
+     *
+     * <p>Se utiliza cuando una solicitud requiere autenticación válida,
+     * pero no presenta credenciales válidas.</p>
+     */
     private final SecurityAuthenticationEntryPoint securityAuthenticationEntryPoint;
+
+    /**
+     * Manejador personalizado de errores de autorización.
+     *
+     * <p>Se utiliza cuando un usuario autenticado no tiene los permisos
+     * necesarios para acceder a un recurso.</p>
+     */
     private final SecurityAccessDeniedHandler securityAccessDeniedHandler;
 
     /**
-     * Endpoints que pueden ser consultados sin autenticación.
+     * Endpoints que pueden consultarse sin autenticación.
      *
-     * <p>Incluye endpoints de monitoreo y documentación de la API.</p>
+     * <p>Incluye los recursos de monitoreo y la documentación OpenAPI
+     * de la aplicación.</p>
      */
     private static final String[] WHITE_LIST_URL = {
             "/actuator/health",
@@ -60,34 +83,30 @@ public class SecurityConfig {
     };
 
     /**
-     * Endpoints públicos del catálogo.
+     * Endpoints de órdenes que pueden consultarse públicamente mediante GET.
      *
-     * <p>La consulta de ordenes mediante HTTP GET puede realizarse
-     * sin autenticación. Las operaciones de modificación permanecen
-     * protegidas.</p>
+     * <p>La lista se mantiene vacía en la configuración actual, por lo que
+     * no se habilitan rutas de órdenes mediante esta lista para acceso público.</p>
      */
     private static final String[] PUBLIC_ORDER_URL = {
 
     };
 
     /**
-     * Construye la cadena de filtros de seguridad utilizada por Spring
-     * Security.
+     * Construye la cadena de filtros de seguridad utilizada por Spring Security.
      *
-     * <p>La configuración:</p>
-     * <ul>
-     *     <li>Deshabilita CSRF debido a que la API es stateless.</li>
-     *     <li>Deshabilita el uso de sesiones HTTP.</li>
-     *     <li>Permite acceso público a los endpoints definidos.</li>
-     *     <li>Requiere autenticación para cualquier otro recurso.</li>
-     *     <li>Utiliza JWT como mecanismo de autenticación.</li>
-     *     <li>Utiliza handlers personalizados para errores 401 y 403.</li>
-     * </ul>
+     * <p>La configuración deshabilita CSRF, establece una política de sesiones
+     * stateless, permite el acceso a los endpoints incluidos en la lista blanca
+     * y exige autenticación para las demás solicitudes.</p>
      *
-     * @param httpSecurity configuración HTTP de Spring Security
-     * @return cadena de filtros de seguridad configurada
-     * @throws Exception si ocurre un error durante la construcción
-     *                   de la configuración de seguridad
+     * <p>También configura OAuth2 Resource Server para validar tokens JWT
+     * y registra los manejadores personalizados para errores de autenticación
+     * y autorización.</p>
+     *
+     * @param httpSecurity objeto utilizado para configurar la seguridad HTTP.
+     * @return cadena de filtros de seguridad configurada.
+     * @throws Exception si ocurre un error al construir la configuración
+     *                   de seguridad.
      */
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -120,6 +139,14 @@ public class SecurityConfig {
         return httpSecurity.build();
     }
 
+    /**
+     * Crea el decodificador JWT utilizado por el servidor de recursos OAuth2.
+     *
+     * <p>El decodificador utiliza la URI JWKS configurada para obtener las
+     * claves necesarias para validar la firma de los tokens.</p>
+     *
+     * @return decodificador JWT basado en Nimbus.
+     */
     @Bean
     public JwtDecoder jwtDecoder() {
         return NimbusJwtDecoder.withJwkSetUri(this.jwkSetUri).build();
