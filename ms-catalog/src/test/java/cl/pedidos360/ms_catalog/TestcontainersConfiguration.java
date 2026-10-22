@@ -5,11 +5,8 @@ import org.springframework.boot.mongodb.autoconfigure.MongoClientSettingsBuilder
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.testcontainers.mongodb.MongoDBContainer;
 import org.testcontainers.utility.DockerImageName;
-
-import static org.mockito.Mockito.mock;
 
 @TestConfiguration(proxyBeanMethods = false)
 class TestcontainersConfiguration {
@@ -27,10 +24,5 @@ class TestcontainersConfiguration {
 		return builder -> builder.uuidRepresentation(
 				UuidRepresentation.STANDARD
 		);
-	}
-
-	@Bean
-	JwtDecoder jwtDecoder() {
-		return mock(JwtDecoder.class);
 	}
 }
