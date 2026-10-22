@@ -9,9 +9,23 @@ spring:
     virtual:
       enabled: true
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${JWT_SET_URI:http://keycloak:8080/realms/pedidos360/protocol/openid-connect/certs}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+jwt:
+  roles-claim: ${JWT_ROLES_CLAIM:realm_access.roles}
+  roles-prefix: ${JWT_ROLES_PREFIX:ROLE_}
+
 server:
   port: ${SERVER_PORT:8084}
-
   shutdown: graceful
 
 spring.lifecycle:

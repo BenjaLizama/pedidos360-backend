@@ -48,9 +48,11 @@ public class JwtAuthenticationConverter implements Converter<Jwt, AbstractAuthen
     public AbstractAuthenticationToken convert(Jwt jwt) {
         Collection<?> roles = extractRoles(jwt);
 
+        String prefix = jwtProperties.getRolesPrefix() != null ? jwtProperties.getRolesPrefix() : "ROLE_";
+
         List<SimpleGrantedAuthority> authorities = roles.stream()
                 .map(Object::toString)
-                .map(role -> jwtProperties.getRolesPrefix() + role)
+                .map(role -> prefix + role)
                 .map(SimpleGrantedAuthority::new)
                 .toList();
 
@@ -71,6 +73,11 @@ public class JwtAuthenticationConverter implements Converter<Jwt, AbstractAuthen
      */
     private Collection<?> extractRoles(Jwt jwt) {
         String rolesClaim = jwtProperties.getRolesClaim();
+
+        // Evitar que un claim nulo rompa la ejecución
+        if (rolesClaim == null || rolesClaim.isBlank()) {
+            rolesClaim = "realm_access.roles";
+        }
 
         if ("realm_access.roles".equals(rolesClaim)) {
             Map<String, Object> realmAccess = jwt.getClaim("realm_access");
