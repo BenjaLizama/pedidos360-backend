@@ -9,16 +9,15 @@ spring:
     password: ${ORDERS_DATABASE_PASSWORD:orders_dev_password}
     driver-class-name: org.postgresql.Driver
 
-  spring:
-    jpa:
-      open-in-view: false
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
       hibernate:
-        ddl-auto: update
-      properties:
-        hibernate:
-          format_sql: true
-          jdbc:
-            time_zone: UTC
+        format_sql: true
+        jdbc:
+          time_zone: UTC
 
   flyway:
     enabled: true
