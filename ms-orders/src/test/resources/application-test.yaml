@@ -1,6 +1,6 @@
 spring:
-  datasource:
-    driver-class-name: org.postgresql.Driver
+  application:
+    name: ms-orders-test
 
   jpa:
     hibernate:
@@ -18,12 +18,8 @@ spring:
     init:
       mode: never
 
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          jwk-set-uri: http://localhost:8080/realms/pedidos360/protocol/openid-connect/certs
-
 logging:
   level:
     root: WARN
+    cl.pedidos360.ms_orders: INFO
+  level.org.testcontainers: INFO
