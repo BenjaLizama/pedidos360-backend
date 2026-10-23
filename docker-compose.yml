@@ -1,4 +1,7 @@
 services:
+  # ==================================================
+  # MONGODB - MS-CATALOG
+  # ==================================================
   mongo:
     image: mongo:7.0
     container_name: pedidos360-mongo-catalog
@@ -26,8 +29,11 @@ services:
       retries: 15
       start_period: 10s
     networks:
-      - catalog-network
+      - pedidos360-network
 
+  # ==================================================
+  # LOCALSTACK - SQS
+  # ==================================================
   localstack:
     image: localstack/localstack:3.4.0
     container_name: pedidos360-localstack
@@ -35,6 +41,8 @@ services:
     environment:
       SERVICES: ${SERVICES:-sqs}
       AWS_DEFAULT_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
     ports:
       - "${LOCALSTACK_PORT:-4566}:4566"
     volumes:
@@ -48,9 +56,11 @@ services:
       retries: 10
       start_period: 10s
     networks:
-      - catalog-network
+      - pedidos360-network
 
-  # Base de datos exclusiva de Keycloak
+  # ==================================================
+  # POSTGRESQL - BASE DE DATOS DE KEYCLOAK
+  # ==================================================
   postgres-keycloak:
     image: postgres:16
     container_name: pedidos360-postgres-keycloak
@@ -70,9 +80,11 @@ services:
       retries: 10
       start_period: 10s
     networks:
-      - catalog-network
+      - pedidos360-network
 
-  # Keycloak IAM Server
+  # ==================================================
+  # KEYCLOAK - IDENTIDAD Y AUTENTICACIÓN
+  # ==================================================
   keycloak:
     image: quay.io/keycloak/keycloak:26.4
     container_name: pedidos360-keycloak
@@ -83,9 +95,11 @@ services:
       KC_DB_URL: jdbc:postgresql://postgres-keycloak:5432/${KEYCLOAK_DB_NAME:-keycloak}
       KC_DB_USERNAME: ${KEYCLOAK_DB_USERNAME:-keycloak_user}
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?Define KEYCLOAK_DB_PASSWORD en .env}
+
       KC_HTTP_ENABLED: "true"
       KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-http://localhost:8080}
       KC_HOSTNAME_STRICT: "false"
+
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Define KEYCLOAK_ADMIN_PASSWORD en .env}
     ports:
@@ -94,9 +108,11 @@ services:
       postgres-keycloak:
         condition: service_healthy
     networks:
-      - catalog-network
+      - pedidos360-network
 
-  # Microservicio Catálogo
+  # ==================================================
+  # MS-CATALOG
+  # ==================================================
   ms-catalog:
     build:
       context: ./ms-catalog
@@ -106,15 +122,19 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       SERVER_PORT: ${SERVER_PORT:-8081}
+
       MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017/pedidos360_catalog?replicaSet=rs0}
+
       KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:?Define KEYCLOAK_ISSUER_URI en .env}
+      JWT_SET_URI: ${JWT_SET_URI:-http://keycloak:8080/realms/pedidos360/protocol/openid-connect/certs}
       JWT_ROLES_CLAIM: ${JWT_ROLES_CLAIM:-realm_access.roles}
       JWT_ROLES_PREFIX: ${JWT_ROLES_PREFIX:-ROLE_}
-      JWT_SET_URI: ${JWT_SET_URI:-http://keycloak:8080/realms/pedidos360/protocol/openid-connect/certs}
+
       AWS_REGION: ${AWS_REGION:-us-east-1}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
       AWS_SQS_ENDPOINT: ${AWS_SQS_ENDPOINT:-http://localstack:4566}
+
     ports:
       - "${CATALOG_HOST_PORT:-8081}:${SERVER_PORT:-8081}"
     depends_on:
@@ -124,12 +144,12 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_started
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     networks:
-      - catalog-network
+      - pedidos360-network
 
-  # Base de datos de Órdenes
+  # ==================================================
+  # POSTGRESQL - MS-ORDERS
+  # ==================================================
   postgres-orders:
     image: postgres:16
     container_name: pedidos360-postgres-orders
@@ -151,9 +171,11 @@ services:
       retries: 10
       start_period: 10s
     networks:
-      - catalog-network
+      - pedidos360-network
 
-  # Microservicio Órdenes
+  # ==================================================
+  # MS-ORDERS
+  # ==================================================
   ms-orders:
     build:
       context: ./ms-orders
@@ -162,24 +184,30 @@ services:
     restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
-      SERVER_PORT: 8082
+      SERVER_PORT: "8082"
+
       ORDERS_DATABASE_URL: jdbc:postgresql://postgres-orders:5432/pedidos360_orders
       ORDERS_DATABASE_USERNAME: ${ORDERS_DATABASE_USERNAME:-orders_user}
       ORDERS_DATABASE_PASSWORD: ${ORDERS_DATABASE_PASSWORD:-orders_dev_password}
+
       KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:?Define KEYCLOAK_ISSUER_URI en .env}
+      JWT_SET_URI: ${JWT_SET_URI:-http://keycloak:8080/realms/pedidos360/protocol/openid-connect/certs}
       JWT_ROLES_CLAIM: ${JWT_ROLES_CLAIM:-realm_access.roles}
       JWT_ROLES_PREFIX: ${JWT_ROLES_PREFIX:-ROLE_}
-      JWT_SET_URI: ${JWT_SET_URI:-http://keycloak:8080/realms/pedidos360/protocol/openid-connect/certs}
+
       AWS_REGION: ${AWS_REGION:-us-east-1}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
       AWS_SQS_ENDPOINT: http://localstack:4566
+
       ORDER_CREATED_QUEUE: ${ORDER_CREATED_QUEUE:-orders-created}
       ORDER_STATUS_UPDATED_QUEUE: ${ORDER_STATUS_UPDATED_QUEUE:-orders-status-updated}
+
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?Define STRIPE_SECRET_KEY en .env}
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:?Define STRIPE_PUBLISHABLE_KEY en .env}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?Define STRIPE_WEBHOOK_SECRET en .env}
       STRIPE_CURRENCY: ${STRIPE_CURRENCY:-clp}
+
     ports:
       - "${ORDERS_HOST_PORT:-8082}:8082"
     depends_on:
@@ -189,17 +217,21 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_started
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     networks:
-      - catalog-network
+      - pedidos360-network
 
+# ==================================================
+# VOLÚMENES PERSISTENTES
+# ==================================================
 volumes:
   mongo_catalog_data:
   localstack_data:
   postgres_orders_data:
   postgres_keycloak_data:
 
+# ==================================================
+# RED INTERNA
+# ==================================================
 networks:
-  catalog-network:
+  pedidos360-network:
     driver: bridge
