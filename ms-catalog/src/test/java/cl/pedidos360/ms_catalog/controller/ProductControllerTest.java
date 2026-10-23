@@ -1,11 +1,6 @@
 package cl.pedidos360.ms_catalog.controller;
 
-import cl.pedidos360.ms_catalog.dto.request.ProductCreateRequest;
-import cl.pedidos360.ms_catalog.dto.request.ProductPriceUpdateRequest;
-import cl.pedidos360.ms_catalog.dto.request.ProductRestockRequest;
-import cl.pedidos360.ms_catalog.dto.request.ProductStatusUpdateRequest;
-import cl.pedidos360.ms_catalog.dto.request.ProductStockUpdateRequest;
-import cl.pedidos360.ms_catalog.dto.request.ProductUpdateRequest;
+import cl.pedidos360.ms_catalog.dto.request.*;
 import cl.pedidos360.ms_catalog.dto.response.ProductResponse;
 import cl.pedidos360.ms_catalog.enums.ProductStatus;
 import cl.pedidos360.ms_catalog.service.ProductService;
@@ -31,11 +26,7 @@ import java.util.UUID;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 

@@ -1,11 +1,6 @@
 package cl.pedidos360.ms_catalog.service.impl;
 
-import cl.pedidos360.ms_catalog.dto.request.ProductCreateRequest;
-import cl.pedidos360.ms_catalog.dto.request.ProductPriceUpdateRequest;
-import cl.pedidos360.ms_catalog.dto.request.ProductRestockRequest;
-import cl.pedidos360.ms_catalog.dto.request.ProductStatusUpdateRequest;
-import cl.pedidos360.ms_catalog.dto.request.ProductStockUpdateRequest;
-import cl.pedidos360.ms_catalog.dto.request.ProductUpdateRequest;
+import cl.pedidos360.ms_catalog.dto.request.*;
 import cl.pedidos360.ms_catalog.dto.response.ProductResponse;
 import cl.pedidos360.ms_catalog.entity.CategoryEntity;
 import cl.pedidos360.ms_catalog.entity.PriceHistoryEntity;
@@ -42,21 +37,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.ArgumentMatchers.nullable;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ProductServiceImplTest {

@@ -4,7 +4,8 @@ package cl.pedidos360.ms_catalog.config;
 import cl.pedidos360.ms_catalog.security.JwtProperties;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class JwtPropertiesTest {
 
