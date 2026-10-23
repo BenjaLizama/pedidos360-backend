@@ -337,6 +337,69 @@ public interface OrderControllerDocs {
             @ValidRequestBody OrderStatusUpdateRequest request
     );
 
+
+    @Operation(
+            summary = "Aceptar una orden",
+            description = """
+                Acepta una orden que se encuentre en estado CREADO.
+                Antes de cambiar el estado, solicita a ms-catalog la
+                reducción de stock de todos los productos de la orden.
+                Si la reducción falla, la aceptación se rechaza.
+                """
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Orden aceptada correctamente",
+                    content = @Content(
+                            schema = @Schema(implementation = StandardResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "No existe una autenticación válida",
+                    content = @Content(
+                            schema = @Schema(implementation = StandardErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Se requiere el rol OPERADOR o ADMIN",
+                    content = @Content(
+                            schema = @Schema(implementation = StandardErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "No existe una orden con el identificador indicado",
+                    content = @Content(
+                            schema = @Schema(implementation = StandardErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "La orden no está en estado CREADO o no hay stock suficiente",
+                    content = @Content(
+                            schema = @Schema(implementation = StandardErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "502",
+                    description = "No fue posible completar la comunicación con ms-catalog",
+                    content = @Content(
+                            schema = @Schema(implementation = StandardErrorResponse.class)
+                    )
+            )
+    })
+    ResponseEntity<StandardResponse<OrderResponse>> accept(
+            @Parameter(
+                    description = "Identificador único de la orden",
+                    required = true,
+                    example = "550e8400-e29b-41d4-a716-446655440000"
+            )
+            UUID orderId
+    );
+
     /**
      * Anotación auxiliar para indicar que el cuerpo de la solicitud
      * debe validarse en la implementación del controlador.

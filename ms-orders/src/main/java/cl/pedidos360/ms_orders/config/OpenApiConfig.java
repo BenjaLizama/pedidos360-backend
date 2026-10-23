@@ -3,6 +3,7 @@ package cl.pedidos360.ms_orders.config;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,24 +11,12 @@ import org.springframework.context.annotation.Configuration;
 /**
  * Configuración de la documentación OpenAPI del microservicio ms-orders.
  *
- * <p>Define los metadatos generales de la API y registra el esquema de
- * autenticación Bearer mediante tokens JWT emitidos por Keycloak.</p>
- *
- * <p>Esta configuración permite que las herramientas compatibles con OpenAPI,
- * como Swagger UI, presenten la información de la API y permitan especificar
- * el token de autenticación para probar los endpoints protegidos.</p>
+ * Define los metadatos generales de la API y registra el esquema de
+ * autenticación Bearer mediante tokens JWT.
  */
 @Configuration
 public class OpenApiConfig {
 
-    /**
-     * Construye la definición OpenAPI del microservicio de órdenes.
-     *
-     * <p>Configura el título, la versión, la descripción funcional del servicio
-     * y el esquema de seguridad HTTP Bearer con formato JWT.</p>
-     *
-     * @return definición OpenAPI configurada para Pedidos360 Orders API.
-     */
     @Bean
     public OpenAPI pedidos360OrdersOpenAPI() {
         return new OpenAPI()
@@ -44,8 +33,7 @@ public class OpenApiConfig {
                                 Permite a los clientes consultar sus propias órdenes,
                                 mientras que los operadores y administradores pueden
                                 consultar y gestionar las órdenes según sus permisos.
-                                """
-                        )
+                                """)
                 )
                 .components(new Components()
                         .addSecuritySchemes(
@@ -58,6 +46,10 @@ public class OpenApiConfig {
                                                 "Ingrese el token JWT emitido por Keycloak."
                                         )
                         )
+                )
+                .addSecurityItem(
+                        new SecurityRequirement()
+                                .addList("bearerAuth")
                 );
     }
 }

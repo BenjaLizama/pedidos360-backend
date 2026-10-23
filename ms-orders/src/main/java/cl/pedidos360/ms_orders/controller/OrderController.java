@@ -84,7 +84,7 @@ public class OrderController implements OrderControllerDocs {
      */
     @Override
     @GetMapping
-    @PreAuthorize("hasAnyRole('OPERADOR', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('OPERADOR', 'ADMINISTRADOR')")
     public ResponseEntity<StandardResponse<Page<OrderResponse>>> findAll(
             @RequestParam(required = false) UUID customerId,
             @RequestParam(required = false) OrderStateEnum status,
@@ -143,7 +143,7 @@ public class OrderController implements OrderControllerDocs {
      */
     @Override
     @GetMapping("/{orderId}")
-    @PreAuthorize("hasAnyRole('CLIENTE', 'OPERADOR', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('CLIENTE', 'OPERADOR', 'ADMINISTRADOR')")
     public ResponseEntity<StandardResponse<OrderResponse>> findById(
             @PathVariable("orderId") UUID orderId
     ) {
@@ -194,7 +194,7 @@ public class OrderController implements OrderControllerDocs {
      */
     @Override
     @PutMapping("/{orderId}/status")
-    @PreAuthorize("hasAnyRole('OPERADOR', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('OPERADOR', 'ADMINISTRADOR')")
     public ResponseEntity<StandardResponse<OrderResponse>> updateStatus(
             @PathVariable("orderId") UUID orderId,
             @Valid @RequestBody OrderStatusUpdateRequest request
@@ -207,6 +207,28 @@ public class OrderController implements OrderControllerDocs {
         return ResponseEntity.ok(
                 StandardResponse.ok(
                         "Estado de la orden actualizado con éxito.",
+                        response
+                )
+        );
+    }
+
+
+    /**
+     * Acepta una orden y solicita la reducción del inventario.
+     */
+    @Override
+    @PatchMapping("/{orderId}/accept")
+    @PreAuthorize("hasAnyRole('OPERADOR', 'ADMINISTRADOR')")
+    public ResponseEntity<StandardResponse<OrderResponse>> accept(
+            @PathVariable("orderId") UUID orderId
+    ) {
+        log.info("Solicitud de aceptación de orden | orderId={}", orderId);
+
+        OrderResponse response = orderService.accept(orderId);
+
+        return ResponseEntity.ok(
+                StandardResponse.ok(
+                        "Orden aceptada y stock actualizado con éxito.",
                         response
                 )
         );

@@ -1,6 +1,7 @@
 package cl.pedidos360.ms_orders.service.impl;
 
 import cl.pedidos360.ms_orders.client.CatalogClient;
+import cl.pedidos360.ms_orders.dto.request.BulkStockReductionItemRequest;
 import cl.pedidos360.ms_orders.dto.request.OrderCreateRequest;
 import cl.pedidos360.ms_orders.dto.request.OrderItemRequest;
 import cl.pedidos360.ms_orders.dto.response.OrderResponse;
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -401,6 +403,44 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
+        if (currentStatus == OrderStateEnum.CREADO
+                && newStatus == OrderStateEnum.ACEPTADO) {
+
+            log.info(
+                    "Solicitando reducción de stock | orderId={}",
+                    orderId
+            );
+
+            try {
+                List<BulkStockReductionItemRequest> stockItems = order.getItems()
+                        .stream()
+                        .map(item -> new BulkStockReductionItemRequest(
+                                item.getProductId(),
+                                item.getQuantity()
+                        ))
+                        .toList();
+
+                catalogClient.reduceStock(stockItems);
+
+                log.info(
+                        "Stock reducido correctamente | orderId={} | items={}",
+                        orderId,
+                        stockItems.size()
+                );
+
+            } catch (RestClientException ex) {
+                log.error(
+                        "No se pudo reducir el stock | orderId={}",
+                        orderId,
+                        ex
+                );
+
+                throw new InvalidOperationException(
+                        "No se puede aceptar la orden porque no fue posible reducir el stock."
+                );
+            }
+        }
+
         order.setOrderState(newStatus);
 
         OrderEntity savedOrder = orderRepository.save(order);
@@ -413,6 +453,12 @@ public class OrderServiceImpl implements OrderService {
         );
 
         return orderMapper.toResponse(savedOrder);
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse accept(UUID orderId) {
+        return updateStatus(orderId, OrderStateEnum.ACEPTADO);
     }
 
     /**

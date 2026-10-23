@@ -76,4 +76,13 @@ public interface OrderService {
      * @return información de la orden con el estado actualizado.
      */
     OrderResponse updateStatus(UUID orderId, OrderStateEnum newStatus);
+
+
+    /**
+     * Acepta una orden en estado CREADO y solicita la reducción de stock.
+     *
+     * @param orderId identificador único de la orden.
+     * @return orden aceptada.
+     */
+    OrderResponse accept(UUID orderId);
 }
