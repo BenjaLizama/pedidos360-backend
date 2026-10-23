@@ -2,6 +2,7 @@ package cl.pedidos360.ms_orders.controller.docs;
 
 import cl.pedidos360.ms_orders.dto.request.OrderCreateRequest;
 import cl.pedidos360.ms_orders.dto.request.OrderStatusUpdateRequest;
+import cl.pedidos360.ms_orders.dto.response.DashboardSummaryResponse;
 import cl.pedidos360.ms_orders.dto.response.OrderResponse;
 import cl.pedidos360.ms_orders.dto.response.StandardErrorResponse;
 import cl.pedidos360.ms_orders.dto.response.StandardResponse;
@@ -399,6 +400,33 @@ public interface OrderControllerDocs {
             )
             UUID orderId
     );
+
+    @Operation(
+            summary = "Obtener resumen del dashboard",
+            description = """
+                Obtiene el total de órdenes agrupadas por estado y la cantidad
+                de órdenes pendientes de aceptación.
+                Disponible para administradores y operadores.
+                """
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Resumen del dashboard obtenido correctamente",
+                    content = @Content(
+                            schema = @Schema(implementation = StandardResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "No existe una autenticación válida"
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "El usuario no tiene permisos para consultar el dashboard"
+            )
+    })
+    ResponseEntity<StandardResponse<DashboardSummaryResponse>> getDashboardSummary();
 
     /**
      * Anotación auxiliar para indicar que el cuerpo de la solicitud

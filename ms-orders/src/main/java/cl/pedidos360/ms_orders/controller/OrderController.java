@@ -4,6 +4,7 @@ package cl.pedidos360.ms_orders.controller;
 import cl.pedidos360.ms_orders.controller.docs.OrderControllerDocs;
 import cl.pedidos360.ms_orders.dto.request.OrderCreateRequest;
 import cl.pedidos360.ms_orders.dto.request.OrderStatusUpdateRequest;
+import cl.pedidos360.ms_orders.dto.response.DashboardSummaryResponse;
 import cl.pedidos360.ms_orders.dto.response.OrderResponse;
 import cl.pedidos360.ms_orders.dto.response.StandardResponse;
 import cl.pedidos360.ms_orders.enums.OrderStateEnum;
@@ -49,12 +50,6 @@ public class OrderController implements OrderControllerDocs {
 
     private final OrderService orderService;
 
-    /**
-     * Crea una orden para el cliente autenticado.
-     *
-     * @param request datos necesarios para crear la orden
-     * @return respuesta HTTP 201 con la orden creada
-     */
     @Override
     @PostMapping
     @PreAuthorize("hasRole('CLIENTE')")
@@ -73,15 +68,6 @@ public class OrderController implements OrderControllerDocs {
                 ));
     }
 
-    /**
-     * Consulta todas las órdenes con filtros opcionales y paginación.
-     * Disponible para operadores y administradores.
-     *
-     * @param customerId identificador opcional del cliente
-     * @param status estado opcional de las órdenes
-     * @param pageable parámetros de paginación y ordenamiento
-     * @return respuesta HTTP 200 con la página de órdenes
-     */
     @Override
     @GetMapping
     @PreAuthorize("hasAnyRole('OPERADOR', 'ADMINISTRADOR')")
@@ -110,12 +96,6 @@ public class OrderController implements OrderControllerDocs {
         );
     }
 
-    /**
-     * Consulta exclusivamente las órdenes del cliente autenticado.
-     *
-     * @param pageable parámetros de paginación y ordenamiento
-     * @return respuesta HTTP 200 con las órdenes del cliente
-     */
     @Override
     @GetMapping("/me")
     @PreAuthorize("hasRole('CLIENTE')")
@@ -132,15 +112,6 @@ public class OrderController implements OrderControllerDocs {
         );
     }
 
-    /**
-     * Consulta una orden por su identificador.
-     *
-     * <p>El servicio debe comprobar que el cliente autenticado sea
-     * propietario de la orden cuando corresponda.</p>
-     *
-     * @param orderId identificador único de la orden
-     * @return respuesta HTTP 200 con la orden encontrada
-     */
     @Override
     @GetMapping("/{orderId}")
     @PreAuthorize("hasAnyRole('CLIENTE', 'OPERADOR', 'ADMINISTRADOR')")
@@ -157,15 +128,6 @@ public class OrderController implements OrderControllerDocs {
         );
     }
 
-    /**
-     * Cancela una orden del cliente autenticado.
-     *
-     * <p>El servicio debe validar la propiedad de la orden y comprobar
-     * que su estado permita la cancelación.</p>
-     *
-     * @param orderId identificador único de la orden
-     * @return respuesta HTTP 200 con la orden actualizada
-     */
     @Override
     @PatchMapping("/{orderId}/cancel")
     @PreAuthorize("hasRole('CLIENTE')")
@@ -184,14 +146,6 @@ public class OrderController implements OrderControllerDocs {
         );
     }
 
-    /**
-     * Actualiza el estado de una orden.
-     * Disponible para operadores y administradores.
-     *
-     * @param orderId identificador único de la orden
-     * @param request solicitud que contiene el nuevo estado
-     * @return respuesta HTTP 200 con la orden actualizada
-     */
     @Override
     @PutMapping("/{orderId}/status")
     @PreAuthorize("hasAnyRole('OPERADOR', 'ADMINISTRADOR')")
@@ -212,10 +166,6 @@ public class OrderController implements OrderControllerDocs {
         );
     }
 
-
-    /**
-     * Acepta una orden y solicita la reducción del inventario.
-     */
     @Override
     @PatchMapping("/{orderId}/accept")
     @PreAuthorize("hasAnyRole('OPERADOR', 'ADMINISTRADOR')")
@@ -230,6 +180,20 @@ public class OrderController implements OrderControllerDocs {
                 StandardResponse.ok(
                         "Orden aceptada y stock actualizado con éxito.",
                         response
+                )
+        );
+    }
+
+    @Override
+    @GetMapping("/dashboard/summary")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
+    public ResponseEntity<StandardResponse<DashboardSummaryResponse>> getDashboardSummary() {
+        DashboardSummaryResponse summary = orderService.getDashboardSummary();
+
+        return ResponseEntity.ok(
+                StandardResponse.ok(
+                        "Resumen del dashboard obtenido correctamente",
+                        summary
                 )
         );
     }

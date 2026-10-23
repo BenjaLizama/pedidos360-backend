@@ -5,7 +5,9 @@ import cl.pedidos360.ms_orders.enums.OrderStateEnum;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -73,4 +75,11 @@ public interface OrderRepository extends JpaRepository<OrderEntity, UUID> {
             OrderStateEnum orderState,
             Pageable pageable
     );
+
+    @Query("""
+        SELECT o.orderState AS orderState, COUNT(o) AS total
+        FROM OrderEntity o
+        GROUP BY o.orderState
+    """)
+    List<OrderStatusCountProjection> countOrdersByStatus();
 }

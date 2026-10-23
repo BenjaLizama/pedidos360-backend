@@ -1,6 +1,7 @@
 package cl.pedidos360.ms_orders.service;
 
 import cl.pedidos360.ms_orders.dto.request.OrderCreateRequest;
+import cl.pedidos360.ms_orders.dto.response.DashboardSummaryResponse;
 import cl.pedidos360.ms_orders.dto.response.OrderResponse;
 import cl.pedidos360.ms_orders.enums.OrderStateEnum;
 import org.springframework.data.domain.Page;
@@ -85,4 +86,6 @@ public interface OrderService {
      * @return orden aceptada.
      */
     OrderResponse accept(UUID orderId);
+
+    DashboardSummaryResponse getDashboardSummary();
 }

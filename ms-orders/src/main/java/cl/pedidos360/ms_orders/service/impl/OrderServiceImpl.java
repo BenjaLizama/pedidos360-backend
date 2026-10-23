@@ -4,6 +4,7 @@ import cl.pedidos360.ms_orders.client.CatalogClient;
 import cl.pedidos360.ms_orders.dto.request.BulkStockReductionItemRequest;
 import cl.pedidos360.ms_orders.dto.request.OrderCreateRequest;
 import cl.pedidos360.ms_orders.dto.request.OrderItemRequest;
+import cl.pedidos360.ms_orders.dto.response.DashboardSummaryResponse;
 import cl.pedidos360.ms_orders.dto.response.OrderResponse;
 import cl.pedidos360.ms_orders.entity.OrderEntity;
 import cl.pedidos360.ms_orders.entity.OrderItemEntity;
@@ -12,6 +13,7 @@ import cl.pedidos360.ms_orders.exception.InvalidOperationException;
 import cl.pedidos360.ms_orders.exception.ResourceNotFoundException;
 import cl.pedidos360.ms_orders.mapper.OrderMapper;
 import cl.pedidos360.ms_orders.repository.OrderRepository;
+import cl.pedidos360.ms_orders.repository.OrderStatusCountProjection;
 import cl.pedidos360.ms_orders.security.CurrentUserProvider;
 import cl.pedidos360.ms_orders.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -27,9 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Implementa las operaciones de negocio para la gestión de órdenes.
@@ -116,7 +116,6 @@ public class OrderServiceImpl implements OrderService {
             try {
                 var product = catalogClient.findById(itemRequest.productId());
 
-                // Se asume que ProductResponse expone price() como BigDecimal.
                 unitPrice = product.price();
 
             } catch (RestClientException exception) {
@@ -459,6 +458,41 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse accept(UUID orderId) {
         return updateStatus(orderId, OrderStateEnum.ACEPTADO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DashboardSummaryResponse getDashboardSummary() {
+
+        Map<String, Long> ordersByStatus = new LinkedHashMap<>();
+
+        for (OrderStateEnum status : OrderStateEnum.values()) {
+            ordersByStatus.put(status.name(), 0L);
+        }
+
+        List<OrderStatusCountProjection> statusCounts =
+                orderRepository.countOrdersByStatus();
+
+        for (OrderStatusCountProjection projection : statusCounts) {
+            ordersByStatus.put(
+                    projection.getOrderState().name(),
+                    projection.getTotal()
+            );
+        }
+
+        long totalOrders = ordersByStatus.values()
+                .stream()
+                .mapToLong(Long::longValue)
+                .sum();
+
+        long pendingAcceptance =
+                ordersByStatus.getOrDefault("CREADO", 0L);
+
+        return new DashboardSummaryResponse(
+                totalOrders,
+                ordersByStatus,
+                pendingAcceptance
+        );
     }
 
     /**
