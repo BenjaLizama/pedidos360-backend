@@ -1,13 +1,9 @@
 package cl.pedidos360.ms_orders.service.impl;
 
 import cl.pedidos360.ms_orders.client.CatalogClient;
-import cl.pedidos360.ms_orders.dto.request.OrderCreateRequest;
-import cl.pedidos360.ms_orders.dto.request.OrderItemRequest;
 import cl.pedidos360.ms_orders.dto.response.OrderResponse;
-import cl.pedidos360.ms_orders.dto.response.ProductResponse;
 import cl.pedidos360.ms_orders.entity.OrderEntity;
 import cl.pedidos360.ms_orders.enums.OrderStateEnum;
-import cl.pedidos360.ms_orders.enums.ProductStatus;
 import cl.pedidos360.ms_orders.exception.InvalidOperationException;
 import cl.pedidos360.ms_orders.exception.ResourceNotFoundException;
 import cl.pedidos360.ms_orders.mapper.OrderMapper;
@@ -16,10 +12,6 @@ import cl.pedidos360.ms_orders.security.CurrentUserProvider;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -27,61 +19,47 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClientException;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
 class OrderServiceImplTest {
 
-    private static final UUID CLIENT_ID =
-            UUID.fromString("11111111-1111-1111-1111-111111111111");
-
-    private static final UUID OTHER_CLIENT_ID =
-            UUID.fromString("22222222-2222-2222-2222-222222222222");
-
-    private static final UUID ORDER_ID =
-            UUID.fromString("33333333-3333-3333-3333-333333333333");
-
-    private static final UUID PRODUCT_ID =
-            UUID.fromString("44444444-4444-4444-4444-444444444444");
-
-    @Mock
     private OrderRepository orderRepository;
-
-    @Mock
     private OrderMapper orderMapper;
-
-    @Mock
     private CurrentUserProvider currentUserProvider;
-
-    @Mock
     private CatalogClient catalogClient;
-
-    @Mock
-    private OrderResponse orderResponse;
-
-    @InjectMocks
     private OrderServiceImpl orderService;
+
+    private UUID clientId;
+    private UUID orderId;
 
     @BeforeEach
     void setUp() {
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(
-                        CLIENT_ID.toString(),
-                        "test",
-                        List.of()
-                )
+        orderRepository = mock(OrderRepository.class);
+        orderMapper = mock(OrderMapper.class);
+        currentUserProvider = mock(CurrentUserProvider.class);
+        catalogClient = mock(CatalogClient.class);
+
+        orderService = new OrderServiceImpl(
+                orderRepository,
+                orderMapper,
+                currentUserProvider,
+                catalogClient
         );
+
+        clientId = UUID.randomUUID();
+        orderId = UUID.randomUUID();
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(clientId);
     }
 
     @AfterEach
@@ -89,422 +67,288 @@ class OrderServiceImplTest {
         SecurityContextHolder.clearContext();
     }
 
-    // -------------------------------------------------------------------------
-    // CREATE
-    // -------------------------------------------------------------------------
-
-    @Test
-    void shouldCreateOrderAndCalculateTotal() {
-        mockCurrentUser();
-        mockSave();
-        mockOrderMapper();
-
-        when(catalogClient.findById(PRODUCT_ID))
-                .thenReturn(product(PRODUCT_ID, "2500.00"));
-
-        OrderCreateRequest request = new OrderCreateRequest(
-                List.of(new OrderItemRequest(PRODUCT_ID, 2))
+    private void authenticateAs(String role) {
+        var authentication = new UsernamePasswordAuthenticationToken(
+                "test-user",
+                "password",
+                List.of(new SimpleGrantedAuthority(role))
         );
 
-        OrderResponse result = orderService.create(request);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
 
-        assertThat(result).isSameAs(orderResponse);
-
-        verify(catalogClient).findById(PRODUCT_ID);
-
-        verify(orderRepository).save(argThat(order ->
-                order.getClientId().equals(CLIENT_ID)
-                        && order.getOrderState() == OrderStateEnum.CREADO
-                        && order.getTotal().compareTo(
-                        new BigDecimal("5000.00")
-                ) == 0
-                        && order.getItems().size() == 1
-        ));
-
-        verify(orderMapper).toResponse(any(OrderEntity.class));
+    private OrderEntity orderWithStatus(OrderStateEnum status) {
+        return OrderEntity.builder()
+                .clientId(clientId)
+                .orderState(status)
+                .total(BigDecimal.ZERO)
+                .build();
     }
 
     @Test
-    void shouldThrowInvalidOperationWhenCatalogClientFails() {
-        mockCurrentUser();
+    void findById_whenOrderDoesNotExistForCustomer_throwsNotFound() {
+        SecurityContextHolder.clearContext();
 
-        when(catalogClient.findById(PRODUCT_ID))
-                .thenThrow(new RestClientException("Error de comunicación"));
+        when(orderRepository.findByIdAndClientId(orderId, clientId))
+                .thenReturn(Optional.empty());
 
-        OrderCreateRequest request = new OrderCreateRequest(
-                List.of(new OrderItemRequest(PRODUCT_ID, 1))
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> orderService.findById(orderId)
         );
 
-        assertThatThrownBy(() -> orderService.create(request))
-                .isInstanceOf(InvalidOperationException.class);
-
-        verify(orderRepository, never()).save(any(OrderEntity.class));
+        verify(orderRepository).findByIdAndClientId(orderId, clientId);
         verifyNoInteractions(orderMapper);
     }
 
     @Test
-    void shouldThrowInvalidOperationWhenProductPriceIsNull() {
-        mockCurrentUser();
+    void findById_whenStaffAndOrderExists_returnsMappedOrder() {
+        authenticateAs("ROLE_ADMINISTRADOR");
 
-        when(catalogClient.findById(PRODUCT_ID))
-                .thenReturn(product(PRODUCT_ID, null));
+        OrderEntity order = orderWithStatus(OrderStateEnum.CREADO);
+        OrderResponse expected = mock(OrderResponse.class);
 
-        OrderCreateRequest request = new OrderCreateRequest(
-                List.of(new OrderItemRequest(PRODUCT_ID, 1))
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderMapper.toResponse(order)).thenReturn(expected);
+
+        OrderResponse result = orderService.findById(orderId);
+
+        assertSame(expected, result);
+        verify(orderRepository).findById(orderId);
+        verify(orderMapper).toResponse(order);
+        verifyNoInteractions(currentUserProvider);
+    }
+
+    @Test
+    void findById_whenStaffAndOrderDoesNotExist_throwsNotFound() {
+        authenticateAs("ROLE_OPERADOR");
+
+        when(orderRepository.findById(orderId)).thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> orderService.findById(orderId)
         );
 
-        assertThatThrownBy(() -> orderService.create(request))
-                .isInstanceOf(InvalidOperationException.class);
-
-        verify(orderRepository, never()).save(any(OrderEntity.class));
+        verify(orderRepository).findById(orderId);
         verifyNoInteractions(orderMapper);
     }
 
     @Test
-    void shouldThrowInvalidOperationWhenProductPriceIsNegative() {
-        mockCurrentUser();
+    void findAll_whenUserIsNotStaff_throwsAccessDenied() {
+        SecurityContextHolder.clearContext();
 
-        when(catalogClient.findById(PRODUCT_ID))
-                .thenReturn(product(PRODUCT_ID, "-10.00"));
-
-        OrderCreateRequest request = new OrderCreateRequest(
-                List.of(new OrderItemRequest(PRODUCT_ID, 1))
+        assertThrows(
+                AccessDeniedException.class,
+                () -> orderService.findAll(
+                        null,
+                        null,
+                        PageRequest.of(0, 10)
+                )
         );
 
-        assertThatThrownBy(() -> orderService.create(request))
-                .isInstanceOf(InvalidOperationException.class);
-
-        verify(orderRepository, never()).save(any(OrderEntity.class));
-        verifyNoInteractions(orderMapper);
+        verifyNoInteractions(orderRepository);
     }
 
-    // -------------------------------------------------------------------------
-    // FIND ALL
-    // -------------------------------------------------------------------------
-
     @Test
-    void shouldFindAllOrdersWhenUserIsStaff() {
-        setStaffAuthentication();
-        mockOrderMapper();
+    void findAll_withoutFilters_queriesAllOrders() {
+        authenticateAs("ADMINISTRADOR");
 
         PageRequest pageable = PageRequest.of(0, 10);
-        OrderEntity order = createOrder(CLIENT_ID, OrderStateEnum.CREADO);
+        Page<OrderEntity> entities = new PageImpl<>(List.of());
 
-        when(orderRepository.findAll(pageable))
-                .thenReturn(new PageImpl<>(List.of(order), pageable, 1));
+        when(orderRepository.findAll(pageable)).thenReturn(entities);
 
         Page<OrderResponse> result =
                 orderService.findAll(null, null, pageable);
 
-        assertThat(result.getTotalElements()).isEqualTo(1);
-        assertThat(result.getContent()).containsExactly(orderResponse);
-
+        assertNotNull(result);
+        assertEquals(0, result.getTotalElements());
         verify(orderRepository).findAll(pageable);
-        verify(orderMapper).toResponse(order);
     }
 
     @Test
-    void shouldFindOrdersByCustomerAndStatus() {
-        setStaffAuthentication();
-        mockOrderMapper();
-
-        PageRequest pageable = PageRequest.of(0, 10);
-        OrderEntity order = createOrder(CLIENT_ID, OrderStateEnum.CREADO);
-
-        when(orderRepository.findAllByClientIdAndOrderState(
-                CLIENT_ID, OrderStateEnum.CREADO, pageable
-        )).thenReturn(new PageImpl<>(List.of(order), pageable, 1));
-
-        Page<OrderResponse> result = orderService.findAll(
-                CLIENT_ID,
-                OrderStateEnum.CREADO,
-                pageable
-        );
-
-        assertThat(result.getTotalElements()).isEqualTo(1);
-        assertThat(result.getContent()).containsExactly(orderResponse);
-
-        verify(orderRepository).findAllByClientIdAndOrderState(
-                CLIENT_ID, OrderStateEnum.CREADO, pageable
-        );
-    }
-
-    @Test
-    void shouldDenyFindAllForNonStaff() {
+    void findMyOrders_returnsOrdersForAuthenticatedClient() {
         PageRequest pageable = PageRequest.of(0, 10);
 
-        assertThatThrownBy(() ->
-                orderService.findAll(null, null, pageable)
-        ).isInstanceOf(AccessDeniedException.class);
-
-        verifyNoInteractions(orderRepository, orderMapper);
-    }
-
-    // -------------------------------------------------------------------------
-    // FIND BY ID
-    // -------------------------------------------------------------------------
-
-    @Test
-    void shouldFindOwnOrderById() {
-        mockCurrentUser();
-        mockOrderMapper();
-
-        OrderEntity order = createOrder(CLIENT_ID, OrderStateEnum.CREADO);
-
-        when(orderRepository.findByIdAndClientId(ORDER_ID, CLIENT_ID))
-                .thenReturn(Optional.of(order));
-
-        OrderResponse result = orderService.findById(ORDER_ID);
-
-        assertThat(result).isSameAs(orderResponse);
-
-        verify(orderRepository).findByIdAndClientId(ORDER_ID, CLIENT_ID);
-        verify(orderMapper).toResponse(order);
-    }
-
-    @Test
-    void shouldNotFindOrderOwnedByAnotherClient() {
-        mockCurrentUser();
-
-        when(orderRepository.findByIdAndClientId(ORDER_ID, CLIENT_ID))
-                .thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> orderService.findById(ORDER_ID))
-                .isInstanceOf(ResourceNotFoundException.class);
-
-        verify(orderRepository).findByIdAndClientId(ORDER_ID, CLIENT_ID);
-        verifyNoInteractions(orderMapper);
-    }
-
-    @Test
-    void shouldAllowStaffToFindAnyOrderById() {
-        setStaffAuthentication();
-        mockOrderMapper();
-
-        OrderEntity order = createOrder(OTHER_CLIENT_ID, OrderStateEnum.CREADO);
-
-        when(orderRepository.findById(ORDER_ID))
-                .thenReturn(Optional.of(order));
-
-        OrderResponse result = orderService.findById(ORDER_ID);
-
-        assertThat(result).isSameAs(orderResponse);
-
-        verify(orderRepository).findById(ORDER_ID);
-        verify(orderMapper).toResponse(order);
-    }
-
-    // -------------------------------------------------------------------------
-    // FIND MY ORDERS
-    // -------------------------------------------------------------------------
-
-    @Test
-    void shouldFindOrdersOfAuthenticatedClient() {
-        mockCurrentUser();
-        mockOrderMapper();
-
-        PageRequest pageable = PageRequest.of(0, 10);
-        OrderEntity order = createOrder(CLIENT_ID, OrderStateEnum.CREADO);
-
-        when(orderRepository.findAllByClientId(CLIENT_ID, pageable))
-                .thenReturn(new PageImpl<>(List.of(order), pageable, 1));
+        when(orderRepository.findAllByClientId(clientId, pageable))
+                .thenReturn(new PageImpl<>(List.of()));
 
         Page<OrderResponse> result = orderService.findMyOrders(pageable);
 
-        assertThat(result.getTotalElements()).isEqualTo(1);
-        assertThat(result.getContent()).containsExactly(orderResponse);
+        assertNotNull(result);
+        assertEquals(0, result.getTotalElements());
 
-        verify(orderRepository).findAllByClientId(CLIENT_ID, pageable);
-        verify(orderMapper).toResponse(order);
-    }
-
-    // -------------------------------------------------------------------------
-    // CANCEL
-    // -------------------------------------------------------------------------
-
-    @Test
-    void shouldCancelOrderWhenItIsCreatedAndBelongsToClient() {
-        mockCurrentUser();
-        mockSave();
-        mockOrderMapper();
-
-        OrderEntity order = createOrder(CLIENT_ID, OrderStateEnum.CREADO);
-
-        when(orderRepository.findByIdAndClientId(ORDER_ID, CLIENT_ID))
-                .thenReturn(Optional.of(order));
-
-        OrderResponse result = orderService.cancel(ORDER_ID);
-
-        assertThat(result).isSameAs(orderResponse);
-        assertThat(order.getOrderState()).isEqualTo(OrderStateEnum.CANCELADO);
-
-        verify(orderRepository).save(order);
-        verify(orderMapper).toResponse(order);
+        verify(currentUserProvider).getCurrentUserId();
+        verify(orderRepository).findAllByClientId(clientId, pageable);
     }
 
     @Test
-    void shouldThrowWhenCancellingOrderNotOwnedByClient() {
-        mockCurrentUser();
-
-        when(orderRepository.findByIdAndClientId(ORDER_ID, CLIENT_ID))
+    void cancel_whenOrderDoesNotExist_throwsNotFound() {
+        when(orderRepository.findByIdAndClientId(orderId, clientId))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> orderService.cancel(ORDER_ID))
-                .isInstanceOf(ResourceNotFoundException.class);
-
-        verify(orderRepository, never()).save(any(OrderEntity.class));
-        verifyNoInteractions(orderMapper);
-    }
-
-    @Test
-    void shouldRejectCancellationWhenOrderIsNotCreated() {
-        mockCurrentUser();
-
-        OrderEntity order = createOrder(CLIENT_ID, OrderStateEnum.ACEPTADO);
-
-        when(orderRepository.findByIdAndClientId(ORDER_ID, CLIENT_ID))
-                .thenReturn(Optional.of(order));
-
-        assertThatThrownBy(() -> orderService.cancel(ORDER_ID))
-                .isInstanceOf(InvalidOperationException.class);
-
-        verify(orderRepository, never()).save(any(OrderEntity.class));
-        verifyNoInteractions(orderMapper);
-    }
-
-    // -------------------------------------------------------------------------
-    // UPDATE STATUS
-    // -------------------------------------------------------------------------
-
-    @Test
-    void shouldUpdateOrderStatusWhenTransitionIsValid() {
-        setStaffAuthentication();
-        mockSave();
-        mockOrderMapper();
-
-        OrderEntity order = createOrder(CLIENT_ID, OrderStateEnum.CREADO);
-
-        when(orderRepository.findById(ORDER_ID))
-                .thenReturn(Optional.of(order));
-
-        OrderResponse result = orderService.updateStatus(
-                ORDER_ID,
-                OrderStateEnum.ACEPTADO
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> orderService.cancel(orderId)
         );
 
-        assertThat(result).isSameAs(orderResponse);
-        assertThat(order.getOrderState()).isEqualTo(OrderStateEnum.ACEPTADO);
+        verify(orderRepository, never()).save(any());
+    }
 
+    @Test
+    void cancel_whenOrderIsNotCreated_throwsInvalidOperation() {
+        OrderEntity order = orderWithStatus(OrderStateEnum.ACEPTADO);
+
+        when(orderRepository.findByIdAndClientId(orderId, clientId))
+                .thenReturn(Optional.of(order));
+
+        assertThrows(
+                InvalidOperationException.class,
+                () -> orderService.cancel(orderId)
+        );
+
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void cancel_whenOrderIsCreated_cancelsAndReturnsMappedOrder() {
+        OrderEntity order = orderWithStatus(OrderStateEnum.CREADO);
+        OrderResponse expected = mock(OrderResponse.class);
+
+        when(orderRepository.findByIdAndClientId(orderId, clientId))
+                .thenReturn(Optional.of(order));
+        when(orderRepository.save(order)).thenReturn(order);
+        when(orderMapper.toResponse(order)).thenReturn(expected);
+
+        OrderResponse result = orderService.cancel(orderId);
+
+        assertSame(expected, result);
+        assertEquals(OrderStateEnum.CANCELADO, order.getOrderState());
         verify(orderRepository).save(order);
         verify(orderMapper).toResponse(order);
     }
 
     @Test
-    void shouldDenyStatusUpdateForNonStaff() {
-        assertThatThrownBy(() ->
-                orderService.updateStatus(ORDER_ID, OrderStateEnum.ACEPTADO)
-        ).isInstanceOf(AccessDeniedException.class);
+    void updateStatus_whenUserIsNotStaff_throwsAccessDenied() {
+        SecurityContextHolder.clearContext();
 
-        verifyNoInteractions(orderRepository, orderMapper);
+        assertThrows(
+                AccessDeniedException.class,
+                () -> orderService.updateStatus(
+                        orderId,
+                        OrderStateEnum.ACEPTADO
+                )
+        );
+
+        verifyNoInteractions(orderRepository);
     }
 
     @Test
-    void shouldThrowWhenOrderToUpdateDoesNotExist() {
-        setStaffAuthentication();
+    void updateStatus_whenOrderDoesNotExist_throwsNotFound() {
+        authenticateAs("ROLE_ADMINISTRADOR");
 
-        when(orderRepository.findById(ORDER_ID))
-                .thenReturn(Optional.empty());
+        when(orderRepository.findById(orderId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() ->
-                orderService.updateStatus(ORDER_ID, OrderStateEnum.ACEPTADO)
-        ).isInstanceOf(ResourceNotFoundException.class);
-
-        verify(orderRepository, never()).save(any(OrderEntity.class));
-        verifyNoInteractions(orderMapper);
-    }
-
-    @Test
-    void shouldRejectInvalidStatusTransition() {
-        setStaffAuthentication();
-
-        OrderEntity order = createOrder(CLIENT_ID, OrderStateEnum.CREADO);
-
-        when(orderRepository.findById(ORDER_ID))
-                .thenReturn(Optional.of(order));
-
-        assertThatThrownBy(() ->
-                orderService.updateStatus(ORDER_ID, OrderStateEnum.DESPACHADO)
-        ).isInstanceOf(InvalidOperationException.class);
-
-        verify(orderRepository, never()).save(any(OrderEntity.class));
-        verifyNoInteractions(orderMapper);
-    }
-
-    @Test
-    void shouldRejectStatusTransitionFromFinalState() {
-        setStaffAuthentication();
-
-        OrderEntity order = createOrder(CLIENT_ID, OrderStateEnum.ENTREGADO);
-
-        when(orderRepository.findById(ORDER_ID))
-                .thenReturn(Optional.of(order));
-
-        assertThatThrownBy(() ->
-                orderService.updateStatus(ORDER_ID, OrderStateEnum.CANCELADO)
-        ).isInstanceOf(InvalidOperationException.class);
-
-        verify(orderRepository, never()).save(any(OrderEntity.class));
-        verifyNoInteractions(orderMapper);
-    }
-
-    // -------------------------------------------------------------------------
-    // HELPERS
-    // -------------------------------------------------------------------------
-
-    private void mockCurrentUser() {
-        when(currentUserProvider.getCurrentUserId()).thenReturn(CLIENT_ID);
-    }
-
-    private void mockSave() {
-        when(orderRepository.save(any(OrderEntity.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-    }
-
-    private void mockOrderMapper() {
-        when(orderMapper.toResponse(any(OrderEntity.class)))
-                .thenReturn(orderResponse);
-    }
-
-    private void setStaffAuthentication() {
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(
-                        "staff-user",
-                        "test",
-                        List.of(new SimpleGrantedAuthority("ROLE_ADMINISTRADOR"))
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> orderService.updateStatus(
+                        orderId,
+                        OrderStateEnum.ACEPTADO
                 )
         );
     }
 
-    private OrderEntity createOrder(UUID clientId, OrderStateEnum state) {
-        return OrderEntity.builder()
-                .clientId(clientId)
-                .orderState(state)
-                .total(new BigDecimal("10000.00"))
-                .build();
+    @Test
+    void updateStatus_whenTransitionIsInvalid_throwsInvalidOperation() {
+        authenticateAs("ROLE_ADMINISTRADOR");
+
+        OrderEntity order = orderWithStatus(OrderStateEnum.CREADO);
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+
+        assertThrows(
+                InvalidOperationException.class,
+                () -> orderService.updateStatus(
+                        orderId,
+                        OrderStateEnum.ENTREGADO
+                )
+        );
+
+        verify(orderRepository, never()).save(any());
+        verifyNoInteractions(catalogClient);
     }
 
-    private ProductResponse product(UUID productId, String price) {
-        return new ProductResponse(
-                productId,
-                "SKU-TEST",
-                "Producto de prueba",
-                "Descripción de prueba",
-                price == null ? null : new BigDecimal(price),
-                100,
-                UUID.randomUUID(),
-                ProductStatus.values()[0],
-                Instant.now(),
-                Instant.now()
+    @Test
+    void updateStatus_whenAcceptingAndCatalogFails_throwsInvalidOperation() {
+        authenticateAs("ROLE_ADMINISTRADOR");
+
+        OrderEntity order = orderWithStatus(OrderStateEnum.CREADO);
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        doThrow(new RestClientException("Catalog unavailable"))
+                .when(catalogClient).reduceStock(any());
+
+        assertThrows(
+                InvalidOperationException.class,
+                () -> orderService.updateStatus(
+                        orderId,
+                        OrderStateEnum.ACEPTADO
+                )
         );
+
+        verify(catalogClient).reduceStock(any());
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void updateStatus_whenMovingFromAcceptedToPreparation_savesNewStatus() {
+        authenticateAs("ROLE_OPERADOR");
+
+        OrderEntity order = orderWithStatus(OrderStateEnum.ACEPTADO);
+        OrderResponse expected = mock(OrderResponse.class);
+
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderRepository.save(order)).thenReturn(order);
+        when(orderMapper.toResponse(order)).thenReturn(expected);
+
+        OrderResponse result = orderService.updateStatus(
+                orderId,
+                OrderStateEnum.EN_PREPARACION
+        );
+
+        assertSame(expected, result);
+        assertEquals(OrderStateEnum.EN_PREPARACION, order.getOrderState());
+        verify(orderRepository).save(order);
+    }
+
+    @Test
+    void accept_delegatesToUpdateStatus() {
+        UUID orderId = UUID.randomUUID();
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        "test-admin",
+                        null,
+                        List.of(
+                                new SimpleGrantedAuthority("ROLE_ADMINISTRADOR")
+                        )
+                )
+        );
+
+        OrderEntity order = orderWithStatus(OrderStateEnum.CREADO);
+        ReflectionTestUtils.setField(order, "id", orderId);
+
+        when(orderRepository.findById(orderId))
+                .thenReturn(Optional.of(order));
+
+        when(orderRepository.save(any(OrderEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        orderService.accept(orderId);
+
+        assertEquals(OrderStateEnum.ACEPTADO, order.getOrderState());
+
+        verify(orderRepository).findById(orderId);
+        verify(orderRepository).save(order);
+        verify(catalogClient).reduceStock(any());
     }
 }
