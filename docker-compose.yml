@@ -162,7 +162,7 @@ services:
     restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
-      SERVER_PORT: 8084
+      SERVER_PORT: 8082
       ORDERS_DATABASE_URL: jdbc:postgresql://postgres-orders:5432/pedidos360_orders
       ORDERS_DATABASE_USERNAME: ${ORDERS_DATABASE_USERNAME:-orders_user}
       ORDERS_DATABASE_PASSWORD: ${ORDERS_DATABASE_PASSWORD:-orders_dev_password}
@@ -181,7 +181,7 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?Define STRIPE_WEBHOOK_SECRET en .env}
       STRIPE_CURRENCY: ${STRIPE_CURRENCY:-clp}
     ports:
-      - "${ORDERS_HOST_PORT:-8084}:8084"
+      - "${ORDERS_HOST_PORT:-8082}:8082"
     depends_on:
       postgres-orders:
         condition: service_healthy
