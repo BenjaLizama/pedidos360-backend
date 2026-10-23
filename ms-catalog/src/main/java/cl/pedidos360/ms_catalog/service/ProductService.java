@@ -6,6 +6,7 @@ import cl.pedidos360.ms_catalog.enums.ProductStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -121,4 +122,21 @@ public interface ProductService {
      * @param id identificador único del producto
      */
     void delete(UUID id);
+
+    /**
+     * Descuenta las cantidades indicadas del stock de múltiples productos.
+     *
+     * <p>La operación valida los elementos de la solicitud y verifica
+     * que cada producto disponga de stock suficiente para efectuar
+     * el descuento solicitado.</p>
+     *
+     * @param request lista de identificadores de productos y cantidades
+     *                que se deben descontar
+     * @return lista de productos con sus existencias actualizadas
+     * @throws IllegalArgumentException si la solicitud es inválida,
+     *         contiene productos duplicados o existe stock insuficiente
+     */
+    List<ProductResponse> bulkReduceStock(
+            List<ProductStockReductionItemRequest> request
+    );
 }

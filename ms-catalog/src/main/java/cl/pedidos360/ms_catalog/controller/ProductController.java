@@ -6,7 +6,6 @@ import cl.pedidos360.ms_catalog.dto.response.ProductResponse;
 import cl.pedidos360.ms_catalog.dto.response.StandardResponse;
 import cl.pedidos360.ms_catalog.enums.ProductStatus;
 import cl.pedidos360.ms_catalog.service.ProductService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -29,7 +29,7 @@ public class ProductController implements ProductControllerDocs {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     public ResponseEntity<StandardResponse<ProductResponse>> create(
-            @Valid @RequestBody ProductCreateRequest request
+            @RequestBody ProductCreateRequest request
     ) {
         ProductResponse response = productService.create(request);
 
@@ -62,7 +62,8 @@ public class ProductController implements ProductControllerDocs {
             @RequestParam(required = false) ProductStatus status,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        Page<ProductResponse> response = productService.search(name, categoryId, status, pageable);
+        Page<ProductResponse> response =
+                productService.search(name, categoryId, status, pageable);
 
         return ResponseEntity.ok(StandardResponse.ok(
                 "Productos recuperados con éxito.",
@@ -75,7 +76,7 @@ public class ProductController implements ProductControllerDocs {
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     public ResponseEntity<StandardResponse<ProductResponse>> update(
             @PathVariable UUID productId,
-            @Valid @RequestBody ProductUpdateRequest request
+            @RequestBody ProductUpdateRequest request
     ) {
         ProductResponse response = productService.update(productId, request);
 
@@ -90,7 +91,7 @@ public class ProductController implements ProductControllerDocs {
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     public ResponseEntity<StandardResponse<ProductResponse>> updateStatus(
             @PathVariable UUID productId,
-            @Valid @RequestBody ProductStatusUpdateRequest request
+            @RequestBody ProductStatusUpdateRequest request
     ) {
         ProductResponse response = productService.updateStatus(productId, request);
 
@@ -105,7 +106,7 @@ public class ProductController implements ProductControllerDocs {
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     public ResponseEntity<StandardResponse<ProductResponse>> updatePrice(
             @PathVariable UUID productId,
-            @Valid @RequestBody ProductPriceUpdateRequest request
+            @RequestBody ProductPriceUpdateRequest request
     ) {
         ProductResponse response = productService.updatePrice(productId, request);
 
@@ -120,7 +121,7 @@ public class ProductController implements ProductControllerDocs {
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     public ResponseEntity<StandardResponse<ProductResponse>> updateStock(
             @PathVariable UUID productId,
-            @Valid @RequestBody ProductStockUpdateRequest request
+            @RequestBody ProductStockUpdateRequest request
     ) {
         ProductResponse response = productService.updateStock(productId, request);
 
@@ -135,7 +136,7 @@ public class ProductController implements ProductControllerDocs {
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     public ResponseEntity<StandardResponse<ProductResponse>> restock(
             @PathVariable UUID productId,
-            @Valid @RequestBody ProductRestockRequest request
+            @RequestBody ProductRestockRequest request
     ) {
         ProductResponse response = productService.restock(productId, request);
 
@@ -157,5 +158,18 @@ public class ProductController implements ProductControllerDocs {
                 "Producto eliminado con éxito.",
                 null
         ));
+    }
+
+    @Override
+    @PostMapping("/bulk/reduce-stock")
+    @PreAuthorize("hasRole('CLIENTE')")
+    public ResponseEntity<StandardResponse<Void>> bulkReduceStock(
+            @RequestBody List<ProductStockReductionItemRequest> request
+    ) {
+        productService.bulkReduceStock(request);
+
+        return ResponseEntity.ok(
+                StandardResponse.ok("Stock actualizado correctamente", null)
+        );
     }
 }

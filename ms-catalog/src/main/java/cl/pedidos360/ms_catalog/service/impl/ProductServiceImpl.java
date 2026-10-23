@@ -31,7 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Implementación del servicio encargado de gestionar
@@ -469,6 +469,159 @@ public class ProductServiceImpl implements ProductService {
                 currentUserProvider.getCurrentUserId(),
                 correlationId
         );
+    }
+
+    /**
+     * Ejecuta el descuento de stock para varios productos y registra
+     * un movimiento de inventario por cada producto procesado.
+     *
+     * @param request productos y cantidades que se deben descontar
+     * @return productos actualizados después de aplicar los descuentos
+     * @throws IllegalArgumentException si la solicitud está vacía,
+     *         contiene datos inválidos o productos duplicados
+     * @throws InsufficientStockException si el stock disponible
+     *         es insuficiente para alguno de los productos
+     * @throws ResourceNotFoundException si alguno de los productos
+     *         solicitados no existe
+     */
+    @Override
+    @Transactional
+    public List<ProductResponse> bulkReduceStock(
+            List<ProductStockReductionItemRequest> request
+    ) {
+        UUID correlationId = correlationIdProvider.getCorrelationId();
+
+        log.info(
+                "Iniciando descuento masivo de stock. CorrelationId: {}, cantidad de productos: {}",
+                correlationId,
+                request == null ? 0 : request.size()
+        );
+
+        if (request == null || request.isEmpty()) {
+            log.warn(
+                    "Descuento masivo rechazado. CorrelationId: {}. Motivo: lista vacía o nula.",
+                    correlationId
+            );
+
+            throw new IllegalArgumentException(
+                    "Debe indicar al menos un producto."
+            );
+        }
+
+        Set<UUID> productIds = new HashSet<>();
+
+        for (ProductStockReductionItemRequest item : request) {
+            if (item == null
+                    || item.productId() == null
+                    || item.quantity() == null
+                    || item.quantity() <= 0) {
+
+                log.warn(
+                        "Descuento masivo rechazado. CorrelationId: {}. Motivo: elemento inválido.",
+                        correlationId
+                );
+
+                throw new IllegalArgumentException(
+                        "Cada producto debe tener un ID válido y una cantidad mayor que cero."
+                );
+            }
+
+            if (!productIds.add(item.productId())) {
+                log.warn(
+                        "Descuento masivo rechazado. CorrelationId: {}, producto duplicado: {}",
+                        correlationId,
+                        item.productId()
+                );
+
+                throw new IllegalArgumentException(
+                        "La solicitud contiene productos duplicados: "
+                                + item.productId()
+                );
+            }
+        }
+
+        log.info(
+                "Validaciones iniciales completadas. CorrelationId: {}, productos: {}",
+                correlationId,
+                request.size()
+        );
+
+        List<ProductEntity> products = new ArrayList<>();
+
+        for (ProductStockReductionItemRequest item : request) {
+            ProductEntity product = findProductById(item.productId());
+
+            if (product.getStock() == null
+                    || product.getStock() < item.quantity()) {
+
+                log.warn(
+                        "Descuento masivo rechazado por stock insuficiente. " +
+                                "CorrelationId: {}, ProductId: {}, stock disponible: {}, cantidad solicitada: {}",
+                        correlationId,
+                        item.productId(),
+                        product.getStock(),
+                        item.quantity()
+                );
+
+                throw new InsufficientStockException(
+                        "Stock insuficiente para el producto: "
+                                + item.productId()
+                );
+            }
+
+            products.add(product);
+        }
+
+        log.info(
+                "Existencia y stock verificados. CorrelationId: {}. Iniciando actualización.",
+                correlationId
+        );
+
+        List<ProductResponse> responses = new ArrayList<>();
+
+        for (int i = 0; i < request.size(); i++) {
+            ProductStockReductionItemRequest item = request.get(i);
+            ProductEntity product = products.get(i);
+
+            Integer previousStock = product.getStock();
+            Integer resultingStock = previousStock - item.quantity();
+
+            product.setStock(resultingStock);
+
+            ProductEntity savedProduct = productRepository.save(product);
+
+            StockMovementEntity movement = stockMovementMapper.toEntity(
+                    savedProduct.getId(),
+                    StockMovementType.ADJUSTMENT,
+                    item.quantity(),
+                    previousStock,
+                    resultingStock,
+                    "Descuento de stock masivo",
+                    correlationId
+            );
+
+            stockMovementRepository.save(movement);
+
+            responses.add(productMapper.toResponse(savedProduct));
+
+            log.info(
+                    "Stock actualizado. CorrelationId: {}, ProductId: {}, " +
+                            "stock anterior: {}, cantidad descontada: {}, stock resultante: {}",
+                    correlationId,
+                    savedProduct.getId(),
+                    previousStock,
+                    item.quantity(),
+                    resultingStock
+            );
+        }
+
+        log.info(
+                "Descuento masivo de stock completado. CorrelationId: {}, productos procesados: {}",
+                correlationId,
+                responses.size()
+        );
+
+        return responses;
     }
 
     /**
