@@ -220,6 +220,46 @@ services:
     networks:
       - pedidos360-network
 
+  # ==================================================
+  # BFF - BACKEND FOR FRONTEND
+  # ==================================================
+  bff:
+    build:
+      context: ./bff
+      dockerfile: Dockerfile
+    container_name: pedidos360-bff
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SERVER_PORT: "8083"
+
+      # Keycloak
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:?Define KEYCLOAK_ISSUER_URI en .env}
+      JWT_SET_URI: ${JWT_SET_URI:-http://keycloak:8080/realms/pedidos360/protocol/openid-connect/certs}
+
+      # Roles JWT
+      JWT_ROLES_CLAIM: ${JWT_ROLES_CLAIM:-realm_access.roles}
+      JWT_ROLES_PREFIX: ${JWT_ROLES_PREFIX:-ROLE_}
+
+      # URLs internas de los microservicios
+      CATALOG_SERVICE_URL: http://ms-catalog:8081
+      ORDERS_SERVICE_URL: http://ms-orders:8082
+
+      # CORS para el frontend
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+
+    ports:
+      - "${BFF_HOST_PORT:-8083}:8083"
+    depends_on:
+      keycloak:
+        condition: service_started
+      ms-catalog:
+        condition: service_started
+      ms-orders:
+        condition: service_started
+    networks:
+      - pedidos360-network
+
 # ==================================================
 # VOLÚMENES PERSISTENTES
 # ==================================================

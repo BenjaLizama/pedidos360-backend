@@ -16,6 +16,14 @@ spring:
           jwk-set-uri: ${JWT_SET_URI}
 
 # ==================================================
+# AUTORIZACIÓN JWT
+# ==================================================
+security:
+  jwt:
+    roles-claim: ${JWT_ROLES_CLAIM:realm_access.roles}
+    roles-prefix: ${JWT_ROLES_PREFIX:ROLE_}
+
+# ==================================================
 # CLIENTES HTTP - MICROSERVICIOS
 # ==================================================
 app:
@@ -31,14 +39,6 @@ app:
   # ==================================================
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
-
-  # ==================================================
-  # AUTORIZACIÓN JWT
-  # ==================================================
-  security:
-    jwt:
-      roles-claim: ${JWT_ROLES_CLAIM:realm_access.roles}
-      roles-prefix: ${JWT_ROLES_PREFIX:ROLE_}
 
 # ==================================================
 # LOGGING
