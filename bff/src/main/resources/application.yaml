@@ -1,0 +1,50 @@
+# ==================================================
+# CONFIGURACIÓN GENERAL
+# ==================================================
+spring:
+  application:
+    name: bff
+
+  profiles:
+    default: dev
+
+  threads:
+    virtual:
+      enabled: true
+
+# ==================================================
+# SERVIDOR
+# ==================================================
+server:
+  port: ${SERVER_PORT:8083}
+
+# ==================================================
+# ACTUATOR
+# ==================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+  info:
+    env:
+      enabled: false
+
+# ==================================================
+# CLIENTES HTTP
+# ==================================================
+app:
+  clients:
+    catalog:
+      connect-timeout: ${CATALOG_CONNECT_TIMEOUT:3s}
+      read-timeout: ${CATALOG_READ_TIMEOUT:10s}
+
+    orders:
+      connect-timeout: ${ORDERS_CONNECT_TIMEOUT:3s}
+      read-timeout: ${ORDERS_READ_TIMEOUT:10s}
