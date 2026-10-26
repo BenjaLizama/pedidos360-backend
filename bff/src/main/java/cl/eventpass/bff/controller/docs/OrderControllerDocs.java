@@ -1,6 +1,5 @@
 package cl.eventpass.bff.controller.docs;
 
-import java.awt.print.Pageable;
 import java.util.UUID;
 
 import cl.eventpass.bff.dto.request.OrderCreateRequest;
@@ -23,6 +22,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -51,19 +51,32 @@ public interface OrderControllerDocs {
                     responseCode = "201",
                     description = "Orden creada correctamente",
                     content = @Content(
-                            schema = @Schema(implementation = StandardResponse.class)
+                            schema = @Schema(
+                                    implementation = StandardResponse.class
+                            )
                     )
             ),
-            @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos"),
-            @ApiResponse(responseCode = "401", description = "No existe una autenticación válida"),
-            @ApiResponse(responseCode = "403", description = "El usuario no tiene permisos para crear órdenes")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Datos de entrada inválidos"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "No existe una autenticación válida"
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "El usuario no tiene permisos para crear órdenes"
+            )
     })
     StandardResponse<OrderResponse> createOrder(
             @RequestBody(
                     description = "Datos necesarios para crear la orden",
                     required = true,
                     content = @Content(
-                            schema = @Schema(implementation = OrderCreateRequest.class)
+                            schema = @Schema(
+                                    implementation = OrderCreateRequest.class
+                            )
                     )
             )
             @org.springframework.web.bind.annotation.RequestBody
@@ -84,29 +97,45 @@ public interface OrderControllerDocs {
                     responseCode = "200",
                     description = "Órdenes consultadas correctamente",
                     content = @Content(
-                            schema = @Schema(implementation = StandardResponse.class)
+                            schema = @Schema(
+                                    implementation = StandardResponse.class
+                            )
                     )
             ),
-            @ApiResponse(responseCode = "400", description = "Filtros o parámetros de paginación inválidos"),
-            @ApiResponse(responseCode = "401", description = "No existe una autenticación válida"),
-            @ApiResponse(responseCode = "403", description = "El usuario no tiene permisos para consultar todas las órdenes")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Filtros o parámetros de paginación inválidos"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "No existe una autenticación válida"
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "El usuario no tiene permisos para consultar todas las órdenes"
+            )
     })
     @io.swagger.v3.oas.annotations.Parameters({
-            @io.swagger.v3.oas.annotations.Parameter(
+            @Parameter(
                     name = "customerId",
                     description = "UUID del cliente por el que se desea filtrar",
                     in = ParameterIn.QUERY
             ),
-            @io.swagger.v3.oas.annotations.Parameter(
+            @Parameter(
                     name = "status",
                     description = "Estado por el que se desea filtrar",
                     in = ParameterIn.QUERY
             )
     })
     StandardResponse<Page<OrderResponse>> findAll(
-            @RequestParam(required = false) UUID customerId,
-            @RequestParam(required = false) OrderStateEnum status,
-            @ParameterObject Pageable pageable
+            @RequestParam(required = false)
+            UUID customerId,
+
+            @RequestParam(required = false)
+            OrderStateEnum status,
+
+            @ParameterObject
+            Pageable pageable
     );
 
     @Operation(
@@ -121,14 +150,23 @@ public interface OrderControllerDocs {
                     responseCode = "200",
                     description = "Órdenes del cliente consultadas correctamente",
                     content = @Content(
-                            schema = @Schema(implementation = StandardResponse.class)
+                            schema = @Schema(
+                                    implementation = StandardResponse.class
+                            )
                     )
             ),
-            @ApiResponse(responseCode = "401", description = "No existe una autenticación válida"),
-            @ApiResponse(responseCode = "403", description = "El usuario no tiene permisos para consultar sus órdenes")
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "No existe una autenticación válida"
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "El usuario no tiene permisos para consultar sus órdenes"
+            )
     })
     StandardResponse<Page<OrderResponse>> findMyOrders(
-            @ParameterObject Pageable pageable
+            @ParameterObject
+            Pageable pageable
     );
 
     @Operation(
@@ -144,13 +182,27 @@ public interface OrderControllerDocs {
                     responseCode = "200",
                     description = "Orden encontrada",
                     content = @Content(
-                            schema = @Schema(implementation = StandardResponse.class)
+                            schema = @Schema(
+                                    implementation = StandardResponse.class
+                            )
                     )
             ),
-            @ApiResponse(responseCode = "400", description = "Identificador UUID inválido"),
-            @ApiResponse(responseCode = "401", description = "No existe una autenticación válida"),
-            @ApiResponse(responseCode = "403", description = "El usuario no puede consultar esta orden"),
-            @ApiResponse(responseCode = "404", description = "La orden no existe")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Identificador UUID inválido"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "No existe una autenticación válida"
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "El usuario no puede consultar esta orden"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "La orden no existe"
+            )
     })
     StandardResponse<OrderResponse> findById(
             @PathVariable @Parameter(
@@ -159,7 +211,8 @@ public interface OrderControllerDocs {
                     required = true,
                     in = ParameterIn.PATH,
                     example = "550e8400-e29b-41d4-a716-446655440000"
-            ) UUID orderId
+            )
+            UUID orderId
     );
 
     @Operation(
@@ -175,23 +228,37 @@ public interface OrderControllerDocs {
                     responseCode = "200",
                     description = "Orden cancelada correctamente",
                     content = @Content(
-                            schema = @Schema(implementation = StandardResponse.class)
+                            schema = @Schema(
+                                    implementation = StandardResponse.class
+                            )
                     )
             ),
-            @ApiResponse(responseCode = "401", description = "No existe una autenticación válida"),
-            @ApiResponse(responseCode = "403", description = "El usuario no puede cancelar esta orden"),
-            @ApiResponse(responseCode = "404", description = "La orden no existe"),
-            @ApiResponse(responseCode = "409", description = "El estado de la orden no permite cancelarla")
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "No existe una autenticación válida"
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "El usuario no puede cancelar esta orden"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "La orden no existe"
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "El estado de la orden no permite cancelarla"
+            )
     })
     StandardResponse<OrderResponse> cancel(
-            @Parameter(
+            @PathVariable @Parameter(
                     name = "orderId",
                     description = "Identificador único de la orden",
                     required = true,
                     in = ParameterIn.PATH,
                     example = "550e8400-e29b-41d4-a716-446655440000"
             )
-            @PathVariable("orderId") UUID orderId
+            UUID orderId
     );
 
     @Operation(
@@ -207,30 +274,49 @@ public interface OrderControllerDocs {
                     responseCode = "200",
                     description = "Estado actualizado correctamente",
                     content = @Content(
-                            schema = @Schema(implementation = StandardResponse.class)
+                            schema = @Schema(
+                                    implementation = StandardResponse.class
+                            )
                     )
             ),
-            @ApiResponse(responseCode = "400", description = "Estado inválido"),
-            @ApiResponse(responseCode = "401", description = "No existe una autenticación válida"),
-            @ApiResponse(responseCode = "403", description = "El usuario no tiene permisos para actualizar el estado"),
-            @ApiResponse(responseCode = "404", description = "La orden no existe"),
-            @ApiResponse(responseCode = "409", description = "La transición de estado no está permitida")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Estado inválido"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "No existe una autenticación válida"
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "El usuario no tiene permisos para actualizar el estado"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "La orden no existe"
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "La transición de estado no está permitida"
+            )
     })
     StandardResponse<OrderResponse> updateStatus(
-            @Parameter(
+            @PathVariable @Parameter(
                     name = "orderId",
                     description = "Identificador único de la orden",
                     required = true,
                     in = ParameterIn.PATH,
                     example = "550e8400-e29b-41d4-a716-446655440000"
             )
-            @PathVariable("orderId") UUID orderId,
+            UUID orderId,
 
             @RequestBody(
                     description = "Estado que se desea asignar a la orden",
                     required = true,
                     content = @Content(
-                            schema = @Schema(implementation = OrderStatusUpdateRequest.class)
+                            schema = @Schema(
+                                    implementation = OrderStatusUpdateRequest.class
+                            )
                     )
             )
             @org.springframework.web.bind.annotation.RequestBody
@@ -251,23 +337,37 @@ public interface OrderControllerDocs {
                     responseCode = "200",
                     description = "Orden aceptada correctamente",
                     content = @Content(
-                            schema = @Schema(implementation = StandardResponse.class)
+                            schema = @Schema(
+                                    implementation = StandardResponse.class
+                            )
                     )
             ),
-            @ApiResponse(responseCode = "401", description = "No existe una autenticación válida"),
-            @ApiResponse(responseCode = "403", description = "El usuario no tiene permisos para aceptar órdenes"),
-            @ApiResponse(responseCode = "404", description = "La orden no existe"),
-            @ApiResponse(responseCode = "409", description = "La orden no puede aceptarse o no hay stock suficiente")
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "No existe una autenticación válida"
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "El usuario no tiene permisos para aceptar órdenes"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "La orden no existe"
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "La orden no puede aceptarse o no hay stock suficiente"
+            )
     })
     StandardResponse<OrderResponse> accept(
-            @Parameter(
+            @PathVariable @Parameter(
                     name = "orderId",
                     description = "Identificador único de la orden",
                     required = true,
                     in = ParameterIn.PATH,
                     example = "550e8400-e29b-41d4-a716-446655440000"
             )
-            @PathVariable("orderId") UUID orderId
+            UUID orderId
     );
 
     @Operation(
@@ -282,11 +382,19 @@ public interface OrderControllerDocs {
                     responseCode = "200",
                     description = "Resumen obtenido correctamente",
                     content = @Content(
-                            schema = @Schema(implementation = StandardResponse.class)
+                            schema = @Schema(
+                                    implementation = StandardResponse.class
+                            )
                     )
             ),
-            @ApiResponse(responseCode = "401", description = "No existe una autenticación válida"),
-            @ApiResponse(responseCode = "403", description = "El usuario no tiene permisos para consultar el dashboard")
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "No existe una autenticación válida"
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "El usuario no tiene permisos para consultar el dashboard"
+            )
     })
     StandardResponse<DashboardSummaryResponse> getDashboardSummary();
 }

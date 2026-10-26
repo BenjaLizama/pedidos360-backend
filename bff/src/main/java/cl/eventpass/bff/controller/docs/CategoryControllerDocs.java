@@ -47,14 +47,26 @@ public interface CategoryControllerDocs {
                     description = "Categoría creada correctamente",
                     content = @Content(
                             schema = @Schema(
-                                    implementation = CategoryResponse.class
+                                    implementation = StandardResponse.class
                             )
                     )
             ),
-            @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos"),
-            @ApiResponse(responseCode = "401", description = "No autenticado"),
-            @ApiResponse(responseCode = "403", description = "No tiene permisos para crear categorías"),
-            @ApiResponse(responseCode = "409", description = "Ya existe una categoría con el mismo nombre")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Datos de entrada inválidos"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "No autenticado"
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "No tiene permisos para crear categorías"
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Ya existe una categoría con el mismo nombre"
+            )
     })
     StandardResponse<CategoryResponse> create(
             @RequestBody(
@@ -88,11 +100,21 @@ public interface CategoryControllerDocs {
                             )
                     )
             ),
-            @ApiResponse(responseCode = "400", description = "Parámetros de consulta inválidos")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Parámetros de consulta inválidos"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "No autenticado"
+            )
     })
     StandardResponse<?> findAll(
             @Parameter(
-                    description = "Filtros, paginación y ordenamiento admitidos por el catálogo"
+                    description = """
+                            Filtros, paginación y ordenamiento admitidos
+                            por el microservicio de catálogo.
+                            """
             )
             @RequestParam Map<String, String> queryParams
     );
@@ -107,22 +129,31 @@ public interface CategoryControllerDocs {
                     description = "Categoría recuperada correctamente",
                     content = @Content(
                             schema = @Schema(
-                                    implementation = CategoryResponse.class
+                                    implementation = StandardResponse.class
                             )
                     )
             ),
-            @ApiResponse(responseCode = "400", description = "Identificador UUID inválido"),
-            @ApiResponse(responseCode = "404", description = "La categoría no existe")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Identificador UUID inválido"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "No autenticado"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "La categoría no existe"
+            )
     })
     StandardResponse<CategoryResponse> findById(
-            @Parameter(
+            @PathVariable @Parameter(
                     name = "categoryId",
                     description = "Identificador único de la categoría",
                     required = true,
                     in = ParameterIn.PATH,
                     example = "550e8400-e29b-41d4-a716-446655440000"
-            )
-            @PathVariable("categoryId") UUID categoryId
+            ) UUID categoryId
     );
 
     @Operation(
@@ -135,25 +166,39 @@ public interface CategoryControllerDocs {
                     description = "Categoría actualizada correctamente",
                     content = @Content(
                             schema = @Schema(
-                                    implementation = CategoryResponse.class
+                                    implementation = StandardResponse.class
                             )
                     )
             ),
-            @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos"),
-            @ApiResponse(responseCode = "401", description = "No autenticado"),
-            @ApiResponse(responseCode = "403", description = "No tiene permisos para actualizar categorías"),
-            @ApiResponse(responseCode = "404", description = "La categoría no existe"),
-            @ApiResponse(responseCode = "409", description = "Ya existe otra categoría con el mismo nombre")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Datos de entrada inválidos"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "No autenticado"
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "No tiene permisos para actualizar categorías"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "La categoría no existe"
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Ya existe otra categoría con el mismo nombre"
+            )
     })
     StandardResponse<CategoryResponse> update(
-            @Parameter(
+            @PathVariable @Parameter(
                     name = "categoryId",
                     description = "Identificador único de la categoría",
                     required = true,
                     in = ParameterIn.PATH,
                     example = "550e8400-e29b-41d4-a716-446655440000"
-            )
-            @PathVariable("categoryId") UUID categoryId,
+            ) UUID categoryId,
 
             @RequestBody(
                     description = "Nuevos datos de la categoría",
@@ -178,24 +223,35 @@ public interface CategoryControllerDocs {
                     description = "Estado actualizado correctamente",
                     content = @Content(
                             schema = @Schema(
-                                    implementation = CategoryResponse.class
+                                    implementation = StandardResponse.class
                             )
                     )
             ),
-            @ApiResponse(responseCode = "400", description = "Estado inválido"),
-            @ApiResponse(responseCode = "401", description = "No autenticado"),
-            @ApiResponse(responseCode = "403", description = "No tiene permisos para modificar el estado"),
-            @ApiResponse(responseCode = "404", description = "La categoría no existe")
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Estado inválido"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "No autenticado"
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "No tiene permisos para modificar el estado"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "La categoría no existe"
+            )
     })
     StandardResponse<CategoryResponse> updateStatus(
-            @Parameter(
+            @PathVariable @Parameter(
                     name = "categoryId",
                     description = "Identificador único de la categoría",
                     required = true,
                     in = ParameterIn.PATH,
                     example = "550e8400-e29b-41d4-a716-446655440000"
-            )
-            @PathVariable("categoryId") UUID categoryId,
+            ) UUID categoryId,
 
             @RequestBody(
                     description = "Nuevo estado de la categoría",
@@ -215,20 +271,35 @@ public interface CategoryControllerDocs {
             description = "Solicita la eliminación lógica de una categoría."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Categoría eliminada correctamente"),
-            @ApiResponse(responseCode = "400", description = "Identificador UUID inválido"),
-            @ApiResponse(responseCode = "401", description = "No autenticado"),
-            @ApiResponse(responseCode = "403", description = "No tiene permisos para eliminar categorías"),
-            @ApiResponse(responseCode = "404", description = "La categoría no existe")
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Categoría eliminada correctamente",
+                    content = @Content
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Identificador UUID inválido"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "No autenticado"
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "No tiene permisos para eliminar categorías"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "La categoría no existe"
+            )
     })
     void delete(
-            @Parameter(
+            @PathVariable @Parameter(
                     name = "categoryId",
                     description = "Identificador único de la categoría",
                     required = true,
                     in = ParameterIn.PATH,
                     example = "550e8400-e29b-41d4-a716-446655440000"
-            )
-            @PathVariable("categoryId") UUID categoryId
+            ) UUID categoryId
     );
 }

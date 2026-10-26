@@ -66,8 +66,11 @@ public class SecurityConfig {
      * sin autenticación. Las operaciones de modificación permanecen
      * protegidas.</p>
      */
-    private static final String[] PUBLIC_CATALOG_URL = {
-
+    private static final String[] PUBLIC_BFF_URL = {
+            "/api/v1/categories",
+            "/api/v1/categories/*",
+            "/api/v1/products/search",
+            "/api/v1/products/*"
     };
 
     /**
@@ -101,7 +104,7 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 HttpMethod.GET,
-                                PUBLIC_CATALOG_URL
+                                PUBLIC_BFF_URL
                         ).permitAll()
 
                         .anyRequest().authenticated()

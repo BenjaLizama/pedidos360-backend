@@ -1,6 +1,8 @@
 package cl.eventpass.bff.controller.docs;
 
+import cl.eventpass.bff.dto.response.PageResponse;
 import cl.eventpass.bff.dto.response.PriceHistoryResponse;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -10,7 +12,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.data.domain.Page;
+
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -27,6 +30,7 @@ import java.util.UUID;
                 de catálogo cuando se producen modificaciones de precio.
                 """
 )
+@SecurityRequirement(name = "bearerAuth")
 public interface PriceHistoryControllerDocs {
 
     @Operation(
@@ -41,8 +45,7 @@ public interface PriceHistoryControllerDocs {
                     Esta operación requiere autenticación y uno de los
                     roles autorizados por el microservicio:
                     ADMINISTRADOR u OPERADOR.
-                    """,
-            security = @SecurityRequirement(name = "bearerAuth")
+                    """
     )
     @ApiResponses({
             @ApiResponse(
@@ -50,7 +53,7 @@ public interface PriceHistoryControllerDocs {
                     description = "Historial de precios recuperado correctamente",
                     content = @Content(
                             schema = @Schema(
-                                    implementation = PriceHistoryResponse.class
+                                    implementation = PageResponse.class
                             )
                     )
             ),
@@ -79,22 +82,24 @@ public interface PriceHistoryControllerDocs {
                     description = "Tiempo de espera agotado al consultar el catálogo"
             )
     })
-    Page<PriceHistoryResponse> findByProductId(
-
+    PageResponse<PriceHistoryResponse> findByProductId(
             @PathVariable @Parameter(
                     name = "productId",
                     description = "Identificador único del producto",
                     required = true,
                     in = ParameterIn.PATH,
                     example = "550e8400-e29b-41d4-a716-446655440000"
-            ) UUID productId,
+            )
+            UUID productId,
 
+            @ParameterObject
             @Parameter(
                     description = """
                             Parámetros de consulta admitidos por el catálogo,
                             incluyendo paginación y ordenamiento.
                             """
             )
-            @RequestParam Map<String, String> queryParams
+            @RequestParam
+            Map<String, String> queryParams
     );
 }

@@ -1,17 +1,26 @@
+
 package cl.eventpass.bff.client;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import cl.eventpass.bff.dto.request.OrderCreateRequest;
+import cl.eventpass.bff.dto.request.OrderStatusUpdateRequest;
+import cl.eventpass.bff.dto.response.DashboardSummaryResponse;
+import cl.eventpass.bff.dto.response.OrderResponse;
+import cl.eventpass.bff.dto.response.StandardResponse;
+import cl.eventpass.bff.enums.OrderStateEnum;
+import cl.eventpass.bff.security.CurrentAuthorizationProvider;
 
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriBuilder;
 
-import tools.jackson.databind.JsonNode;
+import java.util.Map;
+import java.util.UUID;
 
 @Component
 public class OrdersClient {
@@ -19,126 +28,152 @@ public class OrdersClient {
     private static final String ORDERS_API_URI = "/api/v1/orders";
 
     private final RestClient ordersRestClient;
+    private final CurrentAuthorizationProvider currentAuthorizationProvider;
 
     public OrdersClient(
-            @Qualifier("ordersRestClient") RestClient ordersRestClient
+            @Qualifier("ordersRestClient") RestClient ordersRestClient,
+            CurrentAuthorizationProvider currentAuthorizationProvider
     ) {
         this.ordersRestClient = ordersRestClient;
+        this.currentAuthorizationProvider = currentAuthorizationProvider;
     }
 
     // ======================
-    //  ORDENES
+    // ÓRDENES
     // ======================
 
-    // ---- CREAR UNA ORDEN ----
-    public JsonNode createOrder(Object request, String authorization) {
+    public StandardResponse<OrderResponse> createOrder(
+            OrderCreateRequest request
+    ) {
         return ordersRestClient.post()
                 .uri(ORDERS_API_URI)
-                .headers(headers -> applyAuthorization(headers, authorization))
+                .headers(this::setAuthorization)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(request)
                 .retrieve()
-                .body(JsonNode.class);
+                .body(new ParameterizedTypeReference<>() {});
     }
 
-    // ---- LISTAR ORDENES ----
-    public JsonNode findAll(Map<String, ?> queryParams, String authorization) {
+    public StandardResponse<Page<OrderResponse>> findAll(
+            UUID customerId,
+            OrderStateEnum status,
+            Pageable pageable
+    ) {
         return ordersRestClient.get()
                 .uri(uriBuilder -> {
                     uriBuilder.path(ORDERS_API_URI);
-                    addQueryParams(uriBuilder, queryParams);
+
+                    if (customerId != null) {
+                        uriBuilder.queryParam("customerId", customerId);
+                    }
+
+                    if (status != null) {
+                        uriBuilder.queryParam("status", status);
+                    }
+
+                    addPageableParams(uriBuilder, pageable);
+
                     return uriBuilder.build();
                 })
-                .headers(headers -> applyAuthorization(headers, authorization))
+                .headers(this::setAuthorization)
                 .retrieve()
-                .body(JsonNode.class);
+                .body(new ParameterizedTypeReference<>() {});
     }
 
-    // ---- CONSULTAR ORDENES DEL USUARIO AUTENTICADO ----
-    public JsonNode findMyOrders(Map<String, ?> queryParams, String authorization) {
+    public StandardResponse<Page<OrderResponse>> findMyOrders(
+            Pageable pageable
+    ) {
         return ordersRestClient.get()
                 .uri(uriBuilder -> {
                     uriBuilder.path(ORDERS_API_URI + "/me");
-                    addQueryParams(uriBuilder, queryParams);
+                    addPageableParams(uriBuilder, pageable);
                     return uriBuilder.build();
                 })
-                .headers(headers -> applyAuthorization(headers, authorization))
+                .headers(this::setAuthorization)
                 .retrieve()
-                .body(JsonNode.class);
+                .body(new ParameterizedTypeReference<>() {});
     }
 
-    // ---- OBTENER UNA ORDEN POR ID ----
-    public JsonNode findById(UUID orderId, String authorization) {
+    public StandardResponse<OrderResponse> findById(UUID orderId) {
         return ordersRestClient.get()
                 .uri(ORDERS_API_URI + "/{orderId}", orderId)
-                .headers(headers -> applyAuthorization(headers, authorization))
+                .headers(this::setAuthorization)
                 .retrieve()
-                .body(JsonNode.class);
+                .body(new ParameterizedTypeReference<>() {});
     }
 
-    // ---- CANCELAR UNA ORDEN ----
-    public JsonNode cancel(UUID orderId, String authorization) {
+    public StandardResponse<OrderResponse> cancel(UUID orderId) {
         return ordersRestClient.patch()
                 .uri(ORDERS_API_URI + "/{orderId}/cancel", orderId)
-                .headers(headers -> applyAuthorization(headers, authorization))
+                .headers(this::setAuthorization)
                 .retrieve()
-                .body(JsonNode.class);
+                .body(new ParameterizedTypeReference<>() {});
     }
 
-    // ---- ACTUALIZAR ESTADO DE UNA ORDEN ----
-    public JsonNode updateStatus(UUID orderId, Object request, String authorization) {
+    public StandardResponse<OrderResponse> updateStatus(
+            UUID orderId,
+            OrderStatusUpdateRequest request
+    ) {
         return ordersRestClient.put()
                 .uri(ORDERS_API_URI + "/{orderId}/status", orderId)
-                .headers(headers -> applyAuthorization(headers, authorization))
+                .headers(this::setAuthorization)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(request)
                 .retrieve()
-                .body(JsonNode.class);
+                .body(new ParameterizedTypeReference<>() {});
     }
 
-    // ---- ACEPTAR UNA ORDEN ----
-    public JsonNode accept(UUID orderId, String authorization) {
+    public StandardResponse<OrderResponse> accept(UUID orderId) {
         return ordersRestClient.patch()
                 .uri(ORDERS_API_URI + "/{orderId}/accept", orderId)
-                .headers(headers -> applyAuthorization(headers, authorization))
+                .headers(this::setAuthorization)
                 .retrieve()
-                .body(JsonNode.class);
+                .body(new ParameterizedTypeReference<>() {});
     }
 
-    // ---- CONSULTAR RESUMEN DE ORDENES ----
-    public JsonNode getDashboardSummary(String authorization) {
+    public StandardResponse<DashboardSummaryResponse> getDashboardSummary() {
         return ordersRestClient.get()
                 .uri(ORDERS_API_URI + "/dashboard/summary")
-                .headers(headers -> applyAuthorization(headers, authorization))
+                .headers(this::setAuthorization)
                 .retrieve()
-                .body(JsonNode.class);
+                .body(new ParameterizedTypeReference<>() {});
     }
 
-    // ---- METODOS AUXILIARES ----
+    // ======================
+    // MÉTODOS AUXILIARES
+    // ======================
 
-    private void applyAuthorization(
-            HttpHeaders headers,
-            String authorization
-    ) {
-        if (authorization != null && !authorization.isBlank()) {
-            headers.set(HttpHeaders.AUTHORIZATION, authorization);
-        }
+    private void setAuthorization(HttpHeaders headers) {
+        String authorization =
+                currentAuthorizationProvider.getAuthorization();
 
-        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        headers.setBearerAuth(
+                authorization.replaceFirst("^Bearer ", "")
+        );
     }
 
-    private void addQueryParams(
+    /**
+     * Agrega los parámetros de paginación y ordenamiento a la URI.
+     */
+    private void addPageableParams(
             UriBuilder uriBuilder,
-            Map<String, ?> queryParams
+            Pageable pageable
     ) {
-        if (queryParams == null || queryParams.isEmpty()) {
+        if (pageable == null) {
             return;
         }
 
-        queryParams.forEach((key, value) -> {
-            if (value != null) {
-                uriBuilder.queryParam(key, value);
-            }
-        });
+        uriBuilder.queryParam("page", pageable.getPageNumber());
+        uriBuilder.queryParam("size", pageable.getPageSize());
+
+        if (pageable.getSort().isSorted()) {
+            pageable.getSort().forEach(order ->
+                    uriBuilder.queryParam(
+                            "sort",
+                            order.getProperty() + ","
+                                    + order.getDirection().name().toLowerCase()
+                    )
+            );
+        }
     }
 }

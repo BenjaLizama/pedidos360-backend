@@ -1,5 +1,8 @@
+
 package cl.eventpass.bff.controller.docs;
 
+import cl.eventpass.bff.dto.response.PageResponse;
+import cl.eventpass.bff.dto.response.StandardResponse;
 import cl.eventpass.bff.dto.response.StockMovementResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,7 +15,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -29,6 +31,7 @@ import java.util.UUID;
                 de catálogo durante las operaciones de inventario.
                 """
 )
+@SecurityRequirement(name = "bearerAuth")
 public interface StockMovementControllerDocs {
 
     @Operation(
@@ -42,8 +45,7 @@ public interface StockMovementControllerDocs {
 
                     Requiere autenticación y uno de los siguientes roles:
                     ADMINISTRADOR u OPERADOR.
-                    """,
-            security = @SecurityRequirement(name = "bearerAuth")
+                    """
     )
     @ApiResponses({
             @ApiResponse(
@@ -51,7 +53,7 @@ public interface StockMovementControllerDocs {
                     description = "Movimientos de stock recuperados correctamente",
                     content = @Content(
                             schema = @Schema(
-                                    implementation = StockMovementResponse.class
+                                    implementation = StandardResponse.class
                             )
                     )
             ),
@@ -69,7 +71,7 @@ public interface StockMovementControllerDocs {
             ),
             @ApiResponse(
                     responseCode = "404",
-                    description = "Producto o movimientos no encontrados, si el catálogo devuelve este estado"
+                    description = "Producto no encontrado, si el catálogo devuelve este estado"
             ),
             @ApiResponse(
                     responseCode = "502",
@@ -80,22 +82,20 @@ public interface StockMovementControllerDocs {
                     description = "Tiempo de espera agotado al consultar el catálogo"
             )
     })
-    Page<StockMovementResponse> getStockMovements(
-
+    StandardResponse<PageResponse<StockMovementResponse>> getStockMovements(
             @PathVariable @Parameter(
                     name = "productId",
                     description = "Identificador único del producto",
                     required = true,
                     in = ParameterIn.PATH,
                     example = "550e8400-e29b-41d4-a716-446655440000"
-            ) UUID productId,
+            )
+            UUID productId,
 
             @Parameter(
-                    description = """
-                            Parámetros de paginación y ordenamiento admitidos
-                            por el catálogo, como page, size y sort.
-                            """
+                    description = "Parámetros de paginación, ordenamiento y filtros admitidos por el catálogo"
             )
-            @RequestParam Map<String, String> queryParams
+            @RequestParam
+            Map<String, String> queryParams
     );
 }

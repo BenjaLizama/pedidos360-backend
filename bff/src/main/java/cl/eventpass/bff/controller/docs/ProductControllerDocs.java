@@ -1,18 +1,20 @@
 package cl.eventpass.bff.controller.docs;
 
-import cl.eventpass.bff.dto.request.ProductCreateRequest;
-import cl.eventpass.bff.dto.request.ProductUpdateRequest;
-import cl.eventpass.bff.dto.request.ProductStatusUpdateRequest;
-import cl.eventpass.bff.dto.request.ProductPriceUpdateRequest;
-import cl.eventpass.bff.dto.request.ProductStockUpdateRequest;
-import cl.eventpass.bff.dto.request.ProductRestockRequest;
 import cl.eventpass.bff.dto.request.BulkStockReductionItemRequest;
+import cl.eventpass.bff.dto.request.ProductCreateRequest;
+import cl.eventpass.bff.dto.request.ProductPriceUpdateRequest;
+import cl.eventpass.bff.dto.request.ProductRestockRequest;
+import cl.eventpass.bff.dto.request.ProductStatusUpdateRequest;
+import cl.eventpass.bff.dto.request.ProductStockUpdateRequest;
+import cl.eventpass.bff.dto.request.ProductUpdateRequest;
+import cl.eventpass.bff.dto.response.PageResponse;
 import cl.eventpass.bff.dto.response.ProductResponse;
 import cl.eventpass.bff.dto.response.StandardResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
@@ -39,25 +41,23 @@ import java.util.UUID;
                 El BFF no administra directamente los productos ni su stock.
                 """
 )
+@SecurityRequirement(name = "bearerAuth")
 public interface ProductControllerDocs {
 
     @Operation(
             summary = "Crear un producto",
             description = """
-                    Envía una solicitud al microservicio de catálogo
-                    para registrar un nuevo producto.
-
-                    El SKU debe cumplir las reglas de unicidad del catálogo.
-                    Requiere autenticación y un rol autorizado:
-                    ADMINISTRADOR u OPERADOR.
-                    """,
-            security = @SecurityRequirement(name = "bearerAuth")
+                    Registra un producto a través del microservicio de catálogo.
+                    Requiere el rol ADMINISTRADOR u OPERADOR.
+                    """
     )
     @ApiResponses({
             @ApiResponse(
                     responseCode = "201",
                     description = "Producto creado correctamente",
-                    content = @Content(schema = @Schema(implementation = ProductResponse.class))
+                    content = @Content(
+                            schema = @Schema(implementation = StandardResponse.class)
+                    )
             ),
             @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos"),
             @ApiResponse(responseCode = "401", description = "No autenticado"),
@@ -74,19 +74,21 @@ public interface ProductControllerDocs {
                             schema = @Schema(implementation = ProductCreateRequest.class)
                     )
             )
-            @org.springframework.web.bind.annotation.RequestBody ProductCreateRequest request
+            @org.springframework.web.bind.annotation.RequestBody
+            ProductCreateRequest request
     );
 
     @Operation(
             summary = "Obtener un producto por ID",
-            description = "Consulta un producto mediante su identificador UUID.",
-            security = @SecurityRequirement(name = "bearerAuth")
+            description = "Consulta un producto mediante su identificador UUID."
     )
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
                     description = "Producto recuperado correctamente",
-                    content = @Content(schema = @Schema(implementation = ProductResponse.class))
+                    content = @Content(
+                            schema = @Schema(implementation = StandardResponse.class)
+                    )
             ),
             @ApiResponse(responseCode = "400", description = "El identificador UUID no es válido"),
             @ApiResponse(responseCode = "401", description = "No autenticado"),
@@ -102,7 +104,8 @@ public interface ProductControllerDocs {
                     required = true,
                     in = ParameterIn.PATH,
                     example = "550e8400-e29b-41d4-a716-446655440000"
-            ) UUID productId
+            )
+            UUID productId
     );
 
     @Operation(
@@ -110,13 +113,15 @@ public interface ProductControllerDocs {
             description = """
                     Busca productos utilizando los filtros y parámetros
                     de paginación admitidos por el microservicio de catálogo.
-                    """,
-            security = @SecurityRequirement(name = "bearerAuth")
+                    """
     )
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
-                    description = "Productos recuperados correctamente"
+                    description = "Productos recuperados correctamente",
+                    content = @Content(
+                            schema = @Schema(implementation = StandardResponse.class)
+                    )
             ),
             @ApiResponse(responseCode = "400", description = "Filtros o parámetros de paginación inválidos"),
             @ApiResponse(responseCode = "401", description = "No autenticado"),
@@ -124,29 +129,29 @@ public interface ProductControllerDocs {
             @ApiResponse(responseCode = "502", description = "Error de comunicación con el catálogo"),
             @ApiResponse(responseCode = "504", description = "Tiempo de espera agotado al consultar el catálogo")
     })
-    StandardResponse<Page<ProductResponse>> search(
+    StandardResponse<PageResponse<ProductResponse>> search(
             @Parameter(
                     description = "Filtros de búsqueda y parámetros de paginación admitidos por el catálogo."
             )
-            @RequestParam Map<String, String> queryParams
+            @RequestParam
+            Map<String, String> queryParams
     );
 
     @Operation(
             summary = "Actualizar los datos de un producto",
             description = """
-                    Envía una solicitud al catálogo para actualizar
-                    los datos generales de un producto.
-
+                    Actualiza los datos generales de un producto.
                     El precio y el stock se gestionan mediante operaciones
-                    específicas. Requiere el rol ADMINISTRADOR u OPERADOR.
-                    """,
-            security = @SecurityRequirement(name = "bearerAuth")
+                    específicas. Requiere ADMINISTRADOR u OPERADOR.
+                    """
     )
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
                     description = "Producto actualizado correctamente",
-                    content = @Content(schema = @Schema(implementation = ProductResponse.class))
+                    content = @Content(
+                            schema = @Schema(implementation = StandardResponse.class)
+                    )
             ),
             @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos"),
             @ApiResponse(responseCode = "401", description = "No autenticado"),
@@ -162,26 +167,32 @@ public interface ProductControllerDocs {
                     required = true,
                     in = ParameterIn.PATH,
                     example = "550e8400-e29b-41d4-a716-446655440000"
-            ) UUID productId,
+            )
+            UUID productId,
 
             @RequestBody(
                     description = "Campos generales que admite la actualización.",
                     required = true,
-                    content = @Content(schema = @Schema(implementation = ProductUpdateRequest.class))
+                    content = @Content(
+                            schema = @Schema(implementation = ProductUpdateRequest.class)
+                    )
             )
-            @org.springframework.web.bind.annotation.RequestBody ProductUpdateRequest request
+            @org.springframework.web.bind.annotation.RequestBody
+            ProductUpdateRequest request
     );
 
     @Operation(
             summary = "Actualizar el estado de un producto",
-            description = """
-                    Modifica el estado de un producto mediante el catálogo.
-                    Requiere el rol ADMINISTRADOR u OPERADOR.
-                    """,
-            security = @SecurityRequirement(name = "bearerAuth")
+            description = "Modifica el estado del producto. Requiere ADMINISTRADOR u OPERADOR."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Estado actualizado correctamente"),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Estado actualizado correctamente",
+                    content = @Content(
+                            schema = @Schema(implementation = StandardResponse.class)
+                    )
+            ),
             @ApiResponse(responseCode = "400", description = "Estado inválido"),
             @ApiResponse(responseCode = "401", description = "No autenticado"),
             @ApiResponse(responseCode = "403", description = "No tiene permisos para modificar el estado"),
@@ -196,32 +207,41 @@ public interface ProductControllerDocs {
                     required = true,
                     in = ParameterIn.PATH,
                     example = "550e8400-e29b-41d4-a716-446655440000"
-            ) UUID productId,
+            )
+            UUID productId,
 
             @RequestBody(
                     description = "Nuevo estado del producto.",
                     required = true,
-                    content = @Content(schema = @Schema(implementation = ProductStatusUpdateRequest.class))
+                    content = @Content(
+                            schema = @Schema(implementation = ProductStatusUpdateRequest.class)
+                    )
             )
-            @org.springframework.web.bind.annotation.RequestBody ProductStatusUpdateRequest request
+            @org.springframework.web.bind.annotation.RequestBody
+            ProductStatusUpdateRequest request
     );
 
     @Operation(
             summary = "Actualizar el precio de un producto",
             description = """
-                    Solicita al catálogo actualizar el precio del producto.
-                    El microservicio valida el cambio y registra el historial
-                    de precios. Requiere el rol ADMINISTRADOR u OPERADOR.
-                    """,
-            security = @SecurityRequirement(name = "bearerAuth")
+                    Actualiza el precio del producto y permite al catálogo
+                    registrar el historial correspondiente.
+                    Requiere ADMINISTRADOR u OPERADOR.
+                    """
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Precio actualizado correctamente"),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Precio actualizado correctamente",
+                    content = @Content(
+                            schema = @Schema(implementation = StandardResponse.class)
+                    )
+            ),
             @ApiResponse(responseCode = "400", description = "Precio o motivo inválidos"),
             @ApiResponse(responseCode = "401", description = "No autenticado"),
             @ApiResponse(responseCode = "403", description = "No tiene permisos para modificar precios"),
             @ApiResponse(responseCode = "404", description = "Producto no encontrado"),
-            @ApiResponse(responseCode = "409", description = "El cambio de precio entra en conflicto con las reglas del catálogo"),
+            @ApiResponse(responseCode = "409", description = "El cambio entra en conflicto con las reglas del catálogo"),
             @ApiResponse(responseCode = "502", description = "Error de comunicación con el catálogo"),
             @ApiResponse(responseCode = "504", description = "Tiempo de espera agotado al consultar el catálogo")
     })
@@ -232,28 +252,36 @@ public interface ProductControllerDocs {
                     required = true,
                     in = ParameterIn.PATH,
                     example = "550e8400-e29b-41d4-a716-446655440000"
-            ) UUID productId,
+            )
+            UUID productId,
 
             @RequestBody(
                     description = "Nuevo precio y datos adicionales admitidos por el catálogo.",
                     required = true,
-                    content = @Content(schema = @Schema(implementation = ProductPriceUpdateRequest.class))
+                    content = @Content(
+                            schema = @Schema(implementation = ProductPriceUpdateRequest.class)
+                    )
             )
-            @org.springframework.web.bind.annotation.RequestBody ProductPriceUpdateRequest request
+            @org.springframework.web.bind.annotation.RequestBody
+            ProductPriceUpdateRequest request
     );
 
     @Operation(
             summary = "Ajustar el stock de un producto",
             description = """
-                    Envía una solicitud al catálogo para ajustar el stock.
-                    El microservicio valida la cantidad disponible y registra
+                    Ajusta el stock y permite al catálogo registrar
                     el movimiento de inventario correspondiente.
-                    Requiere el rol ADMINISTRADOR u OPERADOR.
-                    """,
-            security = @SecurityRequirement(name = "bearerAuth")
+                    Requiere ADMINISTRADOR u OPERADOR.
+                    """
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Stock actualizado correctamente"),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Stock actualizado correctamente",
+                    content = @Content(
+                            schema = @Schema(implementation = StandardResponse.class)
+                    )
+            ),
             @ApiResponse(responseCode = "400", description = "Operación, cantidad o motivo inválidos"),
             @ApiResponse(responseCode = "401", description = "No autenticado"),
             @ApiResponse(responseCode = "403", description = "No tiene permisos para ajustar el stock"),
@@ -269,27 +297,35 @@ public interface ProductControllerDocs {
                     required = true,
                     in = ParameterIn.PATH,
                     example = "550e8400-e29b-41d4-a716-446655440000"
-            ) UUID productId,
+            )
+            UUID productId,
 
             @RequestBody(
                     description = "Operación, cantidad y motivo del ajuste.",
                     required = true,
-                    content = @Content(schema = @Schema(implementation = ProductStockUpdateRequest.class))
+                    content = @Content(
+                            schema = @Schema(implementation = ProductStockUpdateRequest.class)
+                    )
             )
-            @org.springframework.web.bind.annotation.RequestBody ProductStockUpdateRequest request
+            @org.springframework.web.bind.annotation.RequestBody
+            ProductStockUpdateRequest request
     );
 
     @Operation(
             summary = "Reponer stock de un producto",
             description = """
-                    Envía una solicitud al catálogo para incrementar el stock
-                    y registrar el movimiento correspondiente.
-                    Requiere el rol ADMINISTRADOR u OPERADOR.
-                    """,
-            security = @SecurityRequirement(name = "bearerAuth")
+                    Incrementa el stock y registra el movimiento correspondiente.
+                    Requiere ADMINISTRADOR u OPERADOR.
+                    """
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Stock repuesto correctamente"),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Stock repuesto correctamente",
+                    content = @Content(
+                            schema = @Schema(implementation = StandardResponse.class)
+                    )
+            ),
             @ApiResponse(responseCode = "400", description = "Cantidad o motivo inválidos"),
             @ApiResponse(responseCode = "401", description = "No autenticado"),
             @ApiResponse(responseCode = "403", description = "No tiene permisos para reponer stock"),
@@ -304,27 +340,30 @@ public interface ProductControllerDocs {
                     required = true,
                     in = ParameterIn.PATH,
                     example = "550e8400-e29b-41d4-a716-446655440000"
-            ) UUID productId,
+            )
+            UUID productId,
 
             @RequestBody(
                     description = "Cantidad que se agregará y motivo de la reposición.",
                     required = true,
-                    content = @Content(schema = @Schema(implementation = ProductRestockRequest.class))
+                    content = @Content(
+                            schema = @Schema(implementation = ProductRestockRequest.class)
+                    )
             )
-            @org.springframework.web.bind.annotation.RequestBody ProductRestockRequest request
+            @org.springframework.web.bind.annotation.RequestBody
+            ProductRestockRequest request
     );
 
     @Operation(
             summary = "Eliminar un producto",
-            description = """
-                    Solicita al catálogo la eliminación lógica del producto.
-                    El microservicio determina cómo conservar la trazabilidad
-                    histórica del producto. Requiere el rol ADMINISTRADOR.
-                    """,
-            security = @SecurityRequirement(name = "bearerAuth")
+            description = "Solicita la eliminación lógica del producto. Requiere ADMINISTRADOR."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Producto eliminado sin contenido de respuesta"),
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Producto eliminado sin contenido de respuesta",
+                    content = @Content
+            ),
             @ApiResponse(responseCode = "401", description = "No autenticado"),
             @ApiResponse(responseCode = "403", description = "No tiene permisos para eliminar productos"),
             @ApiResponse(responseCode = "404", description = "Producto no encontrado"),
@@ -338,21 +377,25 @@ public interface ProductControllerDocs {
                     required = true,
                     in = ParameterIn.PATH,
                     example = "550e8400-e29b-41d4-a716-446655440000"
-            ) UUID productId
+            )
+            UUID productId
     );
 
     @Operation(
             summary = "Reducir stock de múltiples productos",
             description = """
-                    Envía al catálogo una lista de productos y cantidades
-                    para reducir el stock de manera masiva.
-                    La validación de cada elemento y el registro de movimientos
-                    corresponden al microservicio de catálogo.
-                    """,
-            security = @SecurityRequirement(name = "bearerAuth")
+                    Envía una lista de productos y cantidades para reducir
+                    el stock de manera masiva.
+                    """
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Solicitud de reducción de stock procesada"),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Solicitud de reducción de stock procesada",
+                    content = @Content(
+                            schema = @Schema(implementation = StandardResponse.class)
+                    )
+            ),
             @ApiResponse(responseCode = "400", description = "La solicitud o la lista de productos es inválida"),
             @ApiResponse(responseCode = "401", description = "No autenticado"),
             @ApiResponse(responseCode = "403", description = "No tiene permisos para reducir stock"),
@@ -365,7 +408,11 @@ public interface ProductControllerDocs {
                     description = "Lista de productos y cantidades que se desean descontar.",
                     required = true,
                     content = @Content(
-                            schema = @Schema(implementation = BulkStockReductionItemRequest.class)
+                            array = @ArraySchema(
+                                    schema = @Schema(
+                                            implementation = BulkStockReductionItemRequest.class
+                                    )
+                            )
                     )
             )
             @org.springframework.web.bind.annotation.RequestBody
