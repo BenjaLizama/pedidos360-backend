@@ -1,5 +1,46 @@
 services:
   # ==================================================
+  # RABBITMQ CLUSTER - NODO MAESTRO
+  # ==================================================
+  rabbitmq-master:
+    image: rabbitmq:3.12-management-alpine
+    container_name: pedidos360-rabbitmq-master
+    hostname: rabbitmq-master
+    ports:
+      - "5672:5672"   # Puerto AMQP principal
+      - "15672:15672" # Management UI principal
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-admin123}
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:-a7F3c9D2e8B1f6A4C0d5E9b7A2f8D1c6E4B0a9F5d3C7e1A8B6f2D0c4E9a5B7d1}
+    volumes:
+      - rabbitmq_master_data:/var/lib/rabbitmq
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    networks:
+      - pedidos360-network
+
+  # ==================================================
+  # RABBITMQ CLUSTER - NODO ESCLAVO
+  # ==================================================
+  rabbitmq-slave:
+    image: rabbitmq:3.12-management-alpine
+    container_name: pedidos360-rabbitmq-slave
+    hostname: rabbitmq-slave
+    ports:
+      - "5673:5672"   # Puerto AMQP secundario
+      - "15673:15672" # Management UI secundaria
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-admin123}
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:-a7F3c9D2e8B1f6A4C0d5E9b7A2f8D1c6E4B0a9F5d3C7e1A8B6f2D0c4E9a5B7d1}
+    volumes:
+      - rabbitmq_slave_data:/var/lib/rabbitmq
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    depends_on:
+      - rabbitmq-master
+    networks:
+      - pedidos360-network
+  # ==================================================
   # MONGODB - MS-CATALOG
   # ==================================================
   mongo:
@@ -268,6 +309,8 @@ volumes:
   localstack_data:
   postgres_orders_data:
   postgres_keycloak_data:
+  rabbitmq_master_data:
+  rabbitmq_slave_data:
 
 # ==================================================
 # RED INTERNA
