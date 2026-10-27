@@ -10,3 +10,8 @@ spring:
       resourceserver:
         jwt:
           jwk-set-uri: ${JWT_SET_URI}
+
+  rabbitmq:
+    listener:
+      simple:
+        acknowledge-mode: auto # Confirmación automática para mayor velocidad

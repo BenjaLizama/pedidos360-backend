@@ -15,6 +15,17 @@ spring:
         jwt:
           jwk-set-uri: ${JWT_SET_URI:http://keycloak:8080/realms/pedidos360/protocol/openid-connect/certs}
 
+  rabbitmq:
+    listener:
+      simple:
+        acknowledge-mode: manual # Garantía de procesamiento crítico
+        prefetch: 1 # Distribución equitativa de carga (Fair Dispatch)
+        retry:
+          enabled: true # Reintentos con Backoff antes de enviar a la DLQ
+          initial-interval: 1000
+          multiplier: 2.0
+          max-attempts: 3
+
   jpa:
     hibernate:
       ddl-auto: update
