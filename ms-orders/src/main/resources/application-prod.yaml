@@ -1,0 +1,66 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: ${ORDERS_DATABASE_URL}
+    username: ${ORDERS_DATABASE_USERNAME}
+    password: ${ORDERS_DATABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: 30000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI}
+
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION}
+      credentials:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        secret-key: ${AWS_SECRET_ACCESS_KEY:}
+      sqs:
+        endpoint: ${AWS_SQS_ENDPOINT:}
+
+server:
+  port: ${PORT:8080}
+
+logging:
+  level:
+    root: INFO
+    cl.pedidos360.ms_orders: INFO
+    org.hibernate.SQL: WARN
+
+app:
+  stripe:
+    secret-key: ${STRIPE_SECRET_KEY}
+    publishable-key: ${STRIPE_PUBLISHABLE_KEY}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET}
+    currency: ${STRIPE_CURRENCY:clp}
+
+  sqs:
+    queues:
+      order-created: ${ORDER_CREATED_QUEUE}
+      order-status-updated: ${ORDER_STATUS_UPDATED_QUEUE}

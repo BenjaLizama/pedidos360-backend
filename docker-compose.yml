@@ -1,0 +1,277 @@
+services:
+  # ==================================================
+  # MONGODB - MS-CATALOG
+  # ==================================================
+  mongo:
+    image: mongo:7.0
+    container_name: pedidos360-mongo-catalog
+    restart: unless-stopped
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongo_catalog_data:/data/db
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          mongosh --quiet --eval
+          "try {
+            rs.status().ok
+          } catch (e) {
+            rs.initiate({
+              _id: 'rs0',
+              members: [{ _id: 0, host: 'mongo:27017' }]
+            }).ok
+          }"
+      interval: 5s
+      timeout: 10s
+      retries: 15
+      start_period: 10s
+    networks:
+      - pedidos360-network
+
+  # ==================================================
+  # LOCALSTACK - SQS
+  # ==================================================
+  localstack:
+    image: localstack/localstack:3.4.0
+    container_name: pedidos360-localstack
+    restart: unless-stopped
+    environment:
+      SERVICES: ${SERVICES:-sqs}
+      AWS_DEFAULT_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
+    ports:
+      - "${LOCALSTACK_PORT:-4566}:4566"
+    volumes:
+      - localstack_data:/var/lib/localstack
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "curl -fsS http://localhost:4566/_localstack/health >/dev/null"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - pedidos360-network
+
+  # ==================================================
+  # POSTGRESQL - BASE DE DATOS DE KEYCLOAK
+  # ==================================================
+  postgres-keycloak:
+    image: postgres:16
+    container_name: pedidos360-postgres-keycloak
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${KEYCLOAK_DB_NAME:-keycloak}
+      POSTGRES_USER: ${KEYCLOAK_DB_USERNAME:-keycloak_user}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?Define KEYCLOAK_DB_PASSWORD en .env}
+    volumes:
+      - postgres_keycloak_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - pedidos360-network
+
+  # ==================================================
+  # KEYCLOAK - IDENTIDAD Y AUTENTICACIÓN
+  # ==================================================
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4
+    container_name: pedidos360-keycloak
+    restart: unless-stopped
+    command: ["start-dev"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres-keycloak:5432/${KEYCLOAK_DB_NAME:-keycloak}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USERNAME:-keycloak_user}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?Define KEYCLOAK_DB_PASSWORD en .env}
+
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-http://localhost:8080}
+      KC_HOSTNAME_STRICT: "false"
+
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Define KEYCLOAK_ADMIN_PASSWORD en .env}
+    ports:
+      - "${KEYCLOAK_PORT:-8080}:8080"
+    depends_on:
+      postgres-keycloak:
+        condition: service_healthy
+    networks:
+      - pedidos360-network
+
+  # ==================================================
+  # MS-CATALOG
+  # ==================================================
+  ms-catalog:
+    build:
+      context: ./ms-catalog
+      dockerfile: Dockerfile
+    container_name: pedidos360-ms-catalog
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SERVER_PORT: ${SERVER_PORT:-8081}
+
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017/pedidos360_catalog?replicaSet=rs0}
+
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:?Define KEYCLOAK_ISSUER_URI en .env}
+      JWT_SET_URI: ${JWT_SET_URI:-http://keycloak:8080/realms/pedidos360/protocol/openid-connect/certs}
+      JWT_ROLES_CLAIM: ${JWT_ROLES_CLAIM:-realm_access.roles}
+      JWT_ROLES_PREFIX: ${JWT_ROLES_PREFIX:-ROLE_}
+
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
+      AWS_SQS_ENDPOINT: ${AWS_SQS_ENDPOINT:-http://localstack:4566}
+
+    ports:
+      - "${CATALOG_HOST_PORT:-8081}:${SERVER_PORT:-8081}"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    networks:
+      - pedidos360-network
+
+  # ==================================================
+  # POSTGRESQL - MS-ORDERS
+  # ==================================================
+  postgres-orders:
+    image: postgres:16
+    container_name: pedidos360-postgres-orders
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pedidos360_orders
+      POSTGRES_USER: ${ORDERS_DATABASE_USERNAME:-orders_user}
+      POSTGRES_PASSWORD: ${ORDERS_DATABASE_PASSWORD:-orders_dev_password}
+    ports:
+      - "${ORDERS_POSTGRES_HOST_PORT:-5434}:5432"
+    volumes:
+      - postgres_orders_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - pedidos360-network
+
+  # ==================================================
+  # MS-ORDERS
+  # ==================================================
+  ms-orders:
+    build:
+      context: ./ms-orders
+      dockerfile: Dockerfile
+    container_name: pedidos360-ms-orders
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SERVER_PORT: "8082"
+
+      ORDERS_DATABASE_URL: jdbc:postgresql://postgres-orders:5432/pedidos360_orders
+      ORDERS_DATABASE_USERNAME: ${ORDERS_DATABASE_USERNAME:-orders_user}
+      ORDERS_DATABASE_PASSWORD: ${ORDERS_DATABASE_PASSWORD:-orders_dev_password}
+
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:?Define KEYCLOAK_ISSUER_URI en .env}
+      JWT_SET_URI: ${JWT_SET_URI:-http://keycloak:8080/realms/pedidos360/protocol/openid-connect/certs}
+      JWT_ROLES_CLAIM: ${JWT_ROLES_CLAIM:-realm_access.roles}
+      JWT_ROLES_PREFIX: ${JWT_ROLES_PREFIX:-ROLE_}
+
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
+      AWS_SQS_ENDPOINT: http://localstack:4566
+
+      ORDER_CREATED_QUEUE: ${ORDER_CREATED_QUEUE:-orders-created}
+      ORDER_STATUS_UPDATED_QUEUE: ${ORDER_STATUS_UPDATED_QUEUE:-orders-status-updated}
+
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?Define STRIPE_SECRET_KEY en .env}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:?Define STRIPE_PUBLISHABLE_KEY en .env}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?Define STRIPE_WEBHOOK_SECRET en .env}
+      STRIPE_CURRENCY: ${STRIPE_CURRENCY:-clp}
+
+    ports:
+      - "${ORDERS_HOST_PORT:-8082}:8082"
+    depends_on:
+      postgres-orders:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    networks:
+      - pedidos360-network
+
+  # ==================================================
+  # BFF - BACKEND FOR FRONTEND
+  # ==================================================
+  bff:
+    build:
+      context: ./bff
+      dockerfile: Dockerfile
+    container_name: pedidos360-bff
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SERVER_PORT: "8083"
+
+      # Keycloak
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:?Define KEYCLOAK_ISSUER_URI en .env}
+      JWT_SET_URI: ${JWT_SET_URI:-http://keycloak:8080/realms/pedidos360/protocol/openid-connect/certs}
+
+      # Roles JWT
+      JWT_ROLES_CLAIM: ${JWT_ROLES_CLAIM:-realm_access.roles}
+      JWT_ROLES_PREFIX: ${JWT_ROLES_PREFIX:-ROLE_}
+
+      # URLs internas de los microservicios
+      CATALOG_SERVICE_URL: http://ms-catalog:8081
+      ORDERS_SERVICE_URL: http://ms-orders:8082
+
+      # CORS para el frontend
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+
+    ports:
+      - "${BFF_HOST_PORT:-8083}:8083"
+    depends_on:
+      keycloak:
+        condition: service_started
+      ms-catalog:
+        condition: service_started
+      ms-orders:
+        condition: service_started
+    networks:
+      - pedidos360-network
+
+# ==================================================
+# VOLÚMENES PERSISTENTES
+# ==================================================
+volumes:
+  mongo_catalog_data:
+  localstack_data:
+  postgres_orders_data:
+  postgres_keycloak_data:
+
+# ==================================================
+# RED INTERNA
+# ==================================================
+networks:
+  pedidos360-network:
+    driver: bridge

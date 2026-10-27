@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: ms-orders-test
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: false
+
+  sql:
+    init:
+      mode: never
+
+logging:
+  level:
+    root: WARN
+    cl.pedidos360.ms_orders: INFO
+  level.org.testcontainers: INFO

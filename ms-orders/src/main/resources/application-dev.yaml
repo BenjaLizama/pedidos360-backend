@@ -1,0 +1,63 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  datasource:
+    url: ${ORDERS_DATABASE_URL:jdbc:postgresql://localhost:5434/pedidos360_orders}
+    username: ${ORDERS_DATABASE_USERNAME:orders_user}
+    password: ${ORDERS_DATABASE_PASSWORD:orders_dev_password}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/pedidos360}
+
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:us-east-1}
+      credentials:
+        access-key: ${AWS_ACCESS_KEY_ID:test}
+        secret-key: ${AWS_SECRET_ACCESS_KEY:test}
+      sqs:
+        endpoint: ${AWS_SQS_ENDPOINT:http://localhost:4566}
+
+server:
+  port: ${SERVER_PORT:8084}
+
+logging:
+  level:
+    cl.pedidos360.ms_orders: DEBUG
+    org.springframework.security: INFO
+    org.hibernate.SQL: DEBUG
+    org.flywaydb: INFO
+
+app:
+  stripe:
+    secret-key: ${STRIPE_SECRET_KEY}
+    publishable-key: ${STRIPE_PUBLISHABLE_KEY}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET}
+    currency: ${STRIPE_CURRENCY:clp}
+
+  sqs:
+    queues:
+      order-created: ${ORDER_CREATED_QUEUE:orders-created}
+      order-status-updated: ${ORDER_STATUS_UPDATED_QUEUE:orders-status-updated}

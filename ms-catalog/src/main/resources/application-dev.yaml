@@ -1,0 +1,62 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  output:
+    ansi:
+      enabled: ALWAYS
+
+  mongodb:
+    uri: ${MONGODB_URI:mongodb://localhost:27017/pedidos360_catalog?directConnection=true}
+    representation:
+      uuid: standard
+
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:us-east-1}
+
+      credentials:
+        access-key: ${AWS_ACCESS_KEY_ID:test}
+        secret-key: ${AWS_SECRET_ACCESS_KEY:test}
+
+      sqs:
+        endpoint: ${AWS_SQS_ENDPOINT:http://localhost:4567}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/pedidos360}
+
+security:
+  jwt:
+    roles-claim: ${JWT_ROLES_CLAIM:realm_access.roles}
+    roles-prefix: ${JWT_ROLES_PREFIX:ROLE_}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+  endpoint:
+    health:
+      show-details: always
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    root: INFO
+    cl.pedidos360.ms_catalog: INFO
+    org.springframework: WARN
+    org.springframework.web: INFO
+    org.springframework.security: TRACE
+    org.springframework.security.oauth2.server.resource: TRACE
+    org.mongodb.driver: WARN

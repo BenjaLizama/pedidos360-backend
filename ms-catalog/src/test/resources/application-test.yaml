@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: ms-catalog-test
+
+  cloud:
+    aws:
+      region:
+        static: us-east-1
+
+  data:
+    mongodb:
+      database: ms_catalog_test
+      uuid-representation: standard
+
+logging:
+  level:
+    root: WARN
+    cl.pedidos360.ms_catalog: INFO
+    org.testcontainers: INFO

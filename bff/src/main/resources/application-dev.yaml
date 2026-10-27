@@ -1,0 +1,49 @@
+# ==================================================
+# SERVIDOR
+# ==================================================
+server:
+  port: ${SERVER_PORT:8083}
+
+# ==================================================
+# SEGURIDAD - KEYCLOAK
+# ==================================================
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/pedidos360}
+          jwk-set-uri: ${JWT_SET_URI:http://localhost:8080/realms/pedidos360/protocol/openid-connect/certs}
+
+# ==================================================
+# AUTORIZACIÓN JWT
+# ==================================================
+security:
+  jwt:
+    roles-claim: ${JWT_ROLES_CLAIM:realm_access.roles}
+    roles-prefix: ${JWT_ROLES_PREFIX:ROLE_}
+
+# ==================================================
+# CLIENTES HTTP - MICROSERVICIOS
+# ==================================================
+app:
+  clients:
+    catalog:
+      base-url: ${CATALOG_SERVICE_URL:http://localhost:8081}
+
+    orders:
+      base-url: ${ORDERS_SERVICE_URL:http://localhost:8082}
+
+  # ==================================================
+  # CORS
+  # ==================================================
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
+# ==================================================
+# LOGGING
+# ==================================================
+logging:
+  level:
+    cl.pedidos360.bff: DEBUG
+    org.springframework.security: INFO

@@ -1,0 +1,54 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  output:
+    ansi:
+      enabled: NEVER
+
+  mongodb:
+    uri: ${MONGODB_URI}
+    representation:
+      uuid: standard
+
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI}
+
+security:
+  jwt:
+    roles-claim: ${JWT_ROLES_CLAIM:realm_access.roles}
+    roles-prefix: ${JWT_ROLES_PREFIX:ROLE_}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+  endpoint:
+    health:
+      show-details: never
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    root: INFO
+    cl.pedidos360.ms_catalog: INFO
+    org.springframework: WARN
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+    org.mongodb.driver: WARN
