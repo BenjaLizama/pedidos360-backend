@@ -1,6 +1,7 @@
 package cl.pedidos360.ms_orders.service.impl;
 
 import cl.pedidos360.ms_orders.client.CatalogClient;
+import cl.pedidos360.ms_orders.dto.events.OrderCreatedEvent;
 import cl.pedidos360.ms_orders.dto.request.BulkStockReductionItemRequest;
 import cl.pedidos360.ms_orders.dto.request.OrderCreateRequest;
 import cl.pedidos360.ms_orders.dto.request.OrderItemRequest;
@@ -15,6 +16,7 @@ import cl.pedidos360.ms_orders.mapper.OrderMapper;
 import cl.pedidos360.ms_orders.repository.OrderRepository;
 import cl.pedidos360.ms_orders.repository.OrderStatusCountProjection;
 import cl.pedidos360.ms_orders.security.CurrentUserProvider;
+import cl.pedidos360.ms_orders.service.OrderPublisherService;
 import cl.pedidos360.ms_orders.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -72,6 +74,9 @@ public class OrderServiceImpl implements OrderService {
      * Cliente HTTP utilizado para consultar los productos de ms-catalog.
      */
     private final CatalogClient catalogClient;
+
+
+    private final OrderPublisherService orderPublisherService;
 
     /**
      * Crea una orden para el usuario autenticado.
@@ -158,6 +163,19 @@ public class OrderServiceImpl implements OrderService {
         order.setTotal(total);
 
         OrderEntity savedOrder = orderRepository.save(order);
+
+        OrderCreatedEvent event = new OrderCreatedEvent(
+                UUID.randomUUID(),
+                savedOrder.getId(),
+                savedOrder.getItems().stream()
+                        .map(item -> new OrderCreatedEvent.OrderItemEvent(
+                                item.getProductId(),
+                                item.getQuantity()
+                        ))
+                        .toList()
+        );
+
+        orderPublisherService.publishOrderCreated(event);
 
         log.info(
                 "Orden creada | orderId={} | clientId={} | itemCount={} | total={} | status={}",

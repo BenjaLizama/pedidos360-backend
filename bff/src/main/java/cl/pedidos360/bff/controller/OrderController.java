@@ -28,6 +28,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import cl.pedidos360.bff.dto.events.OrderEventDto;
+import cl.pedidos360.bff.service.OrderPublisherService;
 
 import java.util.UUID;
 
@@ -35,6 +37,8 @@ import java.util.UUID;
 @RequestMapping("/api/v1/orders")
 @RequiredArgsConstructor
 public class OrderController implements OrderControllerDocs {
+
+    private final OrderPublisherService orderPublisherService;
 
     private final OrdersClient ordersClient;
 
@@ -51,7 +55,21 @@ public class OrderController implements OrderControllerDocs {
     public StandardResponse<OrderResponse> createOrder(
             @Valid @RequestBody OrderCreateRequest request
     ) {
-        return ordersClient.createOrder(request);
+        StandardResponse<OrderResponse> response =
+                ordersClient.createOrder(request);
+
+        if (response != null && response.data() != null) {
+            OrderResponse order = response.data();
+
+            orderPublisherService.publishOrderCreated(
+                    new OrderEventDto(
+                            order.id(),
+                            order.total()
+                    )
+            );
+        }
+
+        return response;
     }
 
     /**

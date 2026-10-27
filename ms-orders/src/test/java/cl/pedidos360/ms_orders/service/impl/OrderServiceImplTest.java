@@ -25,6 +25,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClientException;
+import cl.pedidos360.ms_orders.service.OrderPublisherService;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -43,6 +44,7 @@ class OrderServiceImplTest {
     private CurrentUserProvider currentUserProvider;
     private CatalogClient catalogClient;
     private OrderServiceImpl orderService;
+    private OrderPublisherService orderPublisherService;
 
     private UUID clientId;
     private UUID orderId;
@@ -53,12 +55,14 @@ class OrderServiceImplTest {
         orderMapper = mock(OrderMapper.class);
         currentUserProvider = mock(CurrentUserProvider.class);
         catalogClient = mock(CatalogClient.class);
+        orderPublisherService = mock(OrderPublisherService.class);
 
         orderService = new OrderServiceImpl(
                 orderRepository,
                 orderMapper,
                 currentUserProvider,
-                catalogClient
+                catalogClient,
+                orderPublisherService
         );
 
         clientId = UUID.randomUUID();
