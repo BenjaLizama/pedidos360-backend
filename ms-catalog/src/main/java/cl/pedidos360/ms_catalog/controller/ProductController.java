@@ -162,7 +162,7 @@ public class ProductController implements ProductControllerDocs {
 
     @Override
     @PostMapping("/bulk/reduce-stock")
-    @PreAuthorize("hasRole('CLIENTE')")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     public ResponseEntity<StandardResponse<Void>> bulkReduceStock(
             @RequestBody List<ProductStockReductionItemRequest> request
     ) {
