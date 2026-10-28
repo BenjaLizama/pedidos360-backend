@@ -18,7 +18,7 @@ public class OrderCreatedConsumer {
 
     private final OrderEventProcessingService orderEventProcessingService;
 
-    @RabbitListener(queues = RabbitMQConfig.CATALOG_QUEUE)
+    @RabbitListener(queues = RabbitMQConfig.MAIN_QUEUE)
     public void consume(OrderCreatedEvent event) {
         if (event == null) {
             throw new IllegalArgumentException(
