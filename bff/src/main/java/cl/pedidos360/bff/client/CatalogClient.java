@@ -10,7 +10,6 @@ import cl.pedidos360.bff.dto.request.ProductRestockRequest;
 import cl.pedidos360.bff.dto.request.ProductStatusUpdateRequest;
 import cl.pedidos360.bff.dto.request.ProductStockUpdateRequest;
 import cl.pedidos360.bff.dto.request.ProductUpdateRequest;
-import cl.eventpass.bff.dto.response.*;
 import cl.pedidos360.bff.dto.response.*;
 import cl.pedidos360.bff.security.CurrentAuthorizationProvider;
 
