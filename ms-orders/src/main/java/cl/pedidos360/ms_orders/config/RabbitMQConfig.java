@@ -13,7 +13,7 @@ public class RabbitMQConfig {
 
     // Exchange principal compartido por los microservicios
     public static final String ORDERS_EXCHANGE = "orders.exchange";
-    public static final String ORDERS_ROUTING_KEY = "order.created";
+    public static final String ORDERS_ROUTING_KEY = "order.accepted";
 
     // Cola de notificaciones y su DLQ
     public static final String NOTIFICATION_QUEUE =

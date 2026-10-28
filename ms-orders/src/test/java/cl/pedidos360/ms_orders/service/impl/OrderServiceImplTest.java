@@ -135,9 +135,7 @@ class OrderServiceImplTest {
         verify(catalogClient).findById(productId);
         verify(orderMapper).toResponse(savedOrder);
 
-        verify(orderPublisherService).publishOrderCreated(
-                any(cl.pedidos360.ms_orders.dto.events.OrderCreatedEvent.class)
-        );
+        verifyNoInteractions(orderPublisherService);
     }
 
     @Test
@@ -542,7 +540,9 @@ class OrderServiceImplTest {
         verify(orderRepository).save(order);
         verify(orderMapper).toResponse(order);
         verifyNoInteractions(catalogClient);
-        verifyNoInteractions(orderPublisherService);
+        verify(orderPublisherService).publishOrderAccepted(
+                any(cl.pedidos360.ms_orders.dto.events.OrderAcceptedEvent.class)
+        );
     }
 
     @Test
@@ -650,7 +650,9 @@ class OrderServiceImplTest {
         verify(orderMapper).toResponse(order);
 
         verifyNoInteractions(catalogClient);
-        verifyNoInteractions(orderPublisherService);
+        verify(orderPublisherService).publishOrderAccepted(
+                any(cl.pedidos360.ms_orders.dto.events.OrderAcceptedEvent.class)
+        );
     }
 
     // ---------------------------------------------------------------------
