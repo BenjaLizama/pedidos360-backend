@@ -31,9 +31,10 @@ spring:
       ddl-auto: update
     show-sql: true
 
-jwt:
-  roles-claim: ${JWT_ROLES_CLAIM:realm_access.roles}
-  roles-prefix: ${JWT_ROLES_PREFIX:ROLE_}
+security:
+  jwt:
+    roles-claim: ${JWT_ROLES_CLAIM:realm_access.roles}
+    roles-prefix: ${JWT_ROLES_PREFIX:ROLE_}
 
 server:
   port: ${SERVER_PORT:8084}
