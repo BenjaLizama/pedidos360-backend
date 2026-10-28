@@ -12,7 +12,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/pedidos360}
+          issuer-uri: ${JWT_ISSUER_URI:${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/pedidos360}}
           jwk-set-uri: ${JWT_SET_URI:http://localhost:8080/realms/pedidos360/protocol/openid-connect/certs}
 
 # ==================================================

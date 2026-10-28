@@ -173,7 +173,8 @@ services:
 
       MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017/pedidos360_catalog?replicaSet=rs0}
 
-      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:?Define KEYCLOAK_ISSUER_URI en ..env}
+      JWT_ISSUER_URI: ${JWT_ISSUER_URI:-${KEYCLOAK_ISSUER_URI:?Define JWT_ISSUER_URI o KEYCLOAK_ISSUER_URI en ..env}}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:-${JWT_ISSUER_URI:?Define JWT_ISSUER_URI o KEYCLOAK_ISSUER_URI en ..env}}
       JWT_SET_URI: ${JWT_SET_URI:-http://keycloak:8080/realms/pedidos360/protocol/openid-connect/certs}
       JWT_ROLES_CLAIM: ${JWT_ROLES_CLAIM:-realm_access.roles}
       JWT_ROLES_PREFIX: ${JWT_ROLES_PREFIX:-ROLE_}
@@ -246,7 +247,8 @@ services:
       ORDERS_DATABASE_USERNAME: ${ORDERS_DATABASE_USERNAME:-orders_user}
       ORDERS_DATABASE_PASSWORD: ${ORDERS_DATABASE_PASSWORD:-orders_dev_password}
 
-      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:?Define KEYCLOAK_ISSUER_URI en ..env}
+      JWT_ISSUER_URI: ${JWT_ISSUER_URI:-${KEYCLOAK_ISSUER_URI:?Define JWT_ISSUER_URI o KEYCLOAK_ISSUER_URI en ..env}}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:-${JWT_ISSUER_URI:?Define JWT_ISSUER_URI o KEYCLOAK_ISSUER_URI en ..env}}
       JWT_SET_URI: ${JWT_SET_URI:-http://keycloak:8080/realms/pedidos360/protocol/openid-connect/certs}
       JWT_ROLES_CLAIM: ${JWT_ROLES_CLAIM:-realm_access.roles}
       JWT_ROLES_PREFIX: ${JWT_ROLES_PREFIX:-ROLE_}
@@ -297,7 +299,8 @@ services:
       SERVER_PORT: "8083"
 
       # Keycloak
-      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:?Define KEYCLOAK_ISSUER_URI en ..env}
+      JWT_ISSUER_URI: ${JWT_ISSUER_URI:-${KEYCLOAK_ISSUER_URI:?Define JWT_ISSUER_URI o KEYCLOAK_ISSUER_URI en ..env}}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:-${JWT_ISSUER_URI:?Define JWT_ISSUER_URI o KEYCLOAK_ISSUER_URI en ..env}}
       JWT_SET_URI: ${JWT_SET_URI:-http://keycloak:8080/realms/pedidos360/protocol/openid-connect/certs}
 
       # Roles JWT
@@ -346,7 +349,7 @@ services:
       SPRING_RABBITMQ_ADDRESSES: "rabbitmq-master:5672,rabbitmq-slave:5672"
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-admin}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASS:-admin123}
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/pedidos360/protocol/openid-connect/certs
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: ${JWT_SET_URI:-http://keycloak:8080/realms/pedidos360/protocol/openid-connect/certs}
     ports:
       - "${RABBITMQ_ADMIN_HOST_PORT:-8085}:8085"
     depends_on:
