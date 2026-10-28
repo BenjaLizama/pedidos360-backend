@@ -23,7 +23,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClientException;
 import cl.pedidos360.ms_orders.service.OrderPublisherService;
 
@@ -34,7 +33,6 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 class OrderServiceImplTest {
@@ -136,6 +134,10 @@ class OrderServiceImplTest {
 
         verify(catalogClient).findById(productId);
         verify(orderMapper).toResponse(savedOrder);
+
+        verify(orderPublisherService).publishOrderCreated(
+                any(cl.pedidos360.ms_orders.dto.events.OrderCreatedEvent.class)
+        );
     }
 
     @Test
@@ -486,8 +488,9 @@ class OrderServiceImplTest {
         verify(orderRepository, never()).save(any());
     }
 
+
     @Test
-    void updateStatus_whenMovingFromCreatedToAccepted_reducesStockAndSaves() {
+    void updateStatus_whenMovingFromCreatedToAccepted_savesNewStatusWithoutReducingStockDirectly() {
         authenticateAs("ROLE_ADMINISTRADOR");
 
         OrderEntity order = orderWithStatus(OrderStateEnum.CREADO);
@@ -502,27 +505,11 @@ class OrderServiceImplTest {
 
         assertSame(expected, result);
         assertEquals(OrderStateEnum.ACEPTADO, order.getOrderState());
-        verify(catalogClient).reduceStock(anyList());
+
         verify(orderRepository).save(order);
         verify(orderMapper).toResponse(order);
-    }
-
-    @Test
-    void updateStatus_whenAcceptingAndCatalogFails_throwsInvalidOperation() {
-        authenticateAs("ROLE_ADMINISTRADOR");
-
-        OrderEntity order = orderWithStatus(OrderStateEnum.CREADO);
-        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
-        doThrow(new RestClientException("Catalog unavailable"))
-                .when(catalogClient).reduceStock(anyList());
-
-        assertThrows(
-                InvalidOperationException.class,
-                () -> orderService.updateStatus(orderId, OrderStateEnum.ACEPTADO)
-        );
-
-        verify(catalogClient).reduceStock(anyList());
-        verify(orderRepository, never()).save(any());
+        verifyNoInteractions(catalogClient);
+        verifyNoInteractions(orderPublisherService);
     }
 
     @Test
@@ -603,23 +590,34 @@ class OrderServiceImplTest {
         verify(orderRepository, never()).save(any());
     }
 
+
     @Test
     void accept_delegatesToUpdateStatus() {
         authenticateAs("ROLE_ADMINISTRADOR");
 
         OrderEntity order = orderWithStatus(OrderStateEnum.CREADO);
-        ReflectionTestUtils.setField(order, "id", orderId);
+        OrderResponse expected = mock(OrderResponse.class);
 
-        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
-        when(orderRepository.save(any(OrderEntity.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(orderRepository.findById(orderId))
+                .thenReturn(Optional.of(order));
 
-        orderService.accept(orderId);
+        when(orderRepository.save(order))
+                .thenReturn(order);
 
+        when(orderMapper.toResponse(order))
+                .thenReturn(expected);
+
+        OrderResponse response = orderService.accept(orderId);
+
+        assertSame(expected, response);
         assertEquals(OrderStateEnum.ACEPTADO, order.getOrderState());
+
         verify(orderRepository).findById(orderId);
         verify(orderRepository).save(order);
-        verify(catalogClient).reduceStock(anyList());
+        verify(orderMapper).toResponse(order);
+
+        verifyNoInteractions(catalogClient);
+        verifyNoInteractions(orderPublisherService);
     }
 
     // ---------------------------------------------------------------------

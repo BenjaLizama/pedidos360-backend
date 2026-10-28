@@ -28,8 +28,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import cl.pedidos360.bff.dto.events.OrderEventDto;
-import cl.pedidos360.bff.service.OrderPublisherService;
 
 import java.util.UUID;
 
@@ -38,12 +36,13 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class OrderController implements OrderControllerDocs {
 
-    private final OrderPublisherService orderPublisherService;
-
     private final OrdersClient ordersClient;
 
     /**
      * Crea un pedido para el usuario autenticado.
+     *
+     * La creación y la publicación del evento son responsabilidad
+     * de ms-orders.
      *
      * @param request datos necesarios para crear el pedido
      * @return respuesta con el pedido creado
@@ -55,30 +54,11 @@ public class OrderController implements OrderControllerDocs {
     public StandardResponse<OrderResponse> createOrder(
             @Valid @RequestBody OrderCreateRequest request
     ) {
-        StandardResponse<OrderResponse> response =
-                ordersClient.createOrder(request);
-
-        if (response != null && response.data() != null) {
-            OrderResponse order = response.data();
-
-            orderPublisherService.publishOrderCreated(
-                    new OrderEventDto(
-                            order.id(),
-                            order.total()
-                    )
-            );
-        }
-
-        return response;
+        return ordersClient.createOrder(request);
     }
 
     /**
      * Obtiene pedidos con filtros opcionales de cliente y estado.
-     *
-     * @param customerId identificador del cliente
-     * @param status estado del pedido
-     * @param pageable parámetros de paginación y ordenamiento
-     * @return página de pedidos
      */
     @Override
     @GetMapping
@@ -94,9 +74,6 @@ public class OrderController implements OrderControllerDocs {
 
     /**
      * Obtiene los pedidos del usuario autenticado.
-     *
-     * @param pageable parámetros de paginación y ordenamiento
-     * @return página de pedidos del usuario actual
      */
     @Override
     @GetMapping("/me")
@@ -110,9 +87,6 @@ public class OrderController implements OrderControllerDocs {
 
     /**
      * Busca un pedido por su identificador.
-     *
-     * @param orderId identificador del pedido
-     * @return pedido encontrado
      */
     @Override
     @GetMapping("/{orderId}")
@@ -126,9 +100,6 @@ public class OrderController implements OrderControllerDocs {
 
     /**
      * Cancela un pedido.
-     *
-     * @param orderId identificador del pedido
-     * @return pedido actualizado
      */
     @Override
     @PatchMapping("/{orderId}/cancel")
@@ -142,10 +113,6 @@ public class OrderController implements OrderControllerDocs {
 
     /**
      * Actualiza el estado de un pedido.
-     *
-     * @param orderId identificador del pedido
-     * @param request nuevo estado solicitado
-     * @return pedido actualizado
      */
     @Override
     @PutMapping("/{orderId}/status")
@@ -160,9 +127,6 @@ public class OrderController implements OrderControllerDocs {
 
     /**
      * Acepta un pedido.
-     *
-     * @param orderId identificador del pedido
-     * @return pedido aceptado
      */
     @Override
     @PatchMapping("/{orderId}/accept")
@@ -176,8 +140,6 @@ public class OrderController implements OrderControllerDocs {
 
     /**
      * Obtiene el resumen del dashboard de pedidos.
-     *
-     * @return resumen de pedidos
      */
     @Override
     @GetMapping("/dashboard/summary")

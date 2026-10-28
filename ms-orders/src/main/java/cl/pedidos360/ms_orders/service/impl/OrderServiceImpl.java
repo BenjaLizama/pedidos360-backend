@@ -372,6 +372,47 @@ public class OrderServiceImpl implements OrderService {
         return orderMapper.toResponse(savedOrder);
     }
 
+    @Override
+    @Transactional
+    public OrderResponse accept(UUID orderId) {
+        return updateStatus(orderId, OrderStateEnum.ACEPTADO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DashboardSummaryResponse getDashboardSummary() {
+
+        Map<String, Long> ordersByStatus = new LinkedHashMap<>();
+
+        for (OrderStateEnum status : OrderStateEnum.values()) {
+            ordersByStatus.put(status.name(), 0L);
+        }
+
+        List<OrderStatusCountProjection> statusCounts =
+                orderRepository.countOrdersByStatus();
+
+        for (OrderStatusCountProjection projection : statusCounts) {
+            ordersByStatus.put(
+                    projection.getOrderState().name(),
+                    projection.getTotal()
+            );
+        }
+
+        long totalOrders = ordersByStatus.values()
+                .stream()
+                .mapToLong(Long::longValue)
+                .sum();
+
+        long pendingAcceptance =
+                ordersByStatus.getOrDefault("CREADO", 0L);
+
+        return new DashboardSummaryResponse(
+                totalOrders,
+                ordersByStatus,
+                pendingAcceptance
+        );
+    }
+
     /**
      * Actualiza el estado de una orden existente.
      *
@@ -420,44 +461,6 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
-        if (currentStatus == OrderStateEnum.CREADO
-                && newStatus == OrderStateEnum.ACEPTADO) {
-
-            log.info(
-                    "Solicitando reducción de stock | orderId={}",
-                    orderId
-            );
-
-            try {
-                List<BulkStockReductionItemRequest> stockItems = order.getItems()
-                        .stream()
-                        .map(item -> new BulkStockReductionItemRequest(
-                                item.getProductId(),
-                                item.getQuantity()
-                        ))
-                        .toList();
-
-                catalogClient.reduceStock(stockItems);
-
-                log.info(
-                        "Stock reducido correctamente | orderId={} | items={}",
-                        orderId,
-                        stockItems.size()
-                );
-
-            } catch (RestClientException ex) {
-                log.error(
-                        "No se pudo reducir el stock | orderId={}",
-                        orderId,
-                        ex
-                );
-
-                throw new InvalidOperationException(
-                        "No se puede aceptar la orden porque no fue posible reducir el stock."
-                );
-            }
-        }
-
         order.setOrderState(newStatus);
 
         OrderEntity savedOrder = orderRepository.save(order);
@@ -470,47 +473,6 @@ public class OrderServiceImpl implements OrderService {
         );
 
         return orderMapper.toResponse(savedOrder);
-    }
-
-    @Override
-    @Transactional
-    public OrderResponse accept(UUID orderId) {
-        return updateStatus(orderId, OrderStateEnum.ACEPTADO);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public DashboardSummaryResponse getDashboardSummary() {
-
-        Map<String, Long> ordersByStatus = new LinkedHashMap<>();
-
-        for (OrderStateEnum status : OrderStateEnum.values()) {
-            ordersByStatus.put(status.name(), 0L);
-        }
-
-        List<OrderStatusCountProjection> statusCounts =
-                orderRepository.countOrdersByStatus();
-
-        for (OrderStatusCountProjection projection : statusCounts) {
-            ordersByStatus.put(
-                    projection.getOrderState().name(),
-                    projection.getTotal()
-            );
-        }
-
-        long totalOrders = ordersByStatus.values()
-                .stream()
-                .mapToLong(Long::longValue)
-                .sum();
-
-        long pendingAcceptance =
-                ordersByStatus.getOrDefault("CREADO", 0L);
-
-        return new DashboardSummaryResponse(
-                totalOrders,
-                ordersByStatus,
-                pendingAcceptance
-        );
     }
 
     /**

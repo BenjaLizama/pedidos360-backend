@@ -14,4 +14,11 @@ spring:
   rabbitmq:
     listener:
       simple:
-        acknowledge-mode: auto # Confirmación automática para mayor velocidad
+        acknowledge-mode: auto
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1000
+          multiplier: 2.0
+          max-interval: 5000
