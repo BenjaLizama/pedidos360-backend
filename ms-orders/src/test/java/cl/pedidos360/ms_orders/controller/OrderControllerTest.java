@@ -203,6 +203,18 @@ class OrderControllerTest {
 
     @Test
     @WithMockUser(roles = "OPERADOR")
+    void cancelShouldReturn200ForStaff() throws Exception {
+        when(orderService.cancel(orderId))
+                .thenReturn(orderResponse());
+
+        mockMvc.perform(patch(BASE_URL + "/{orderId}/cancel", orderId))
+                .andExpect(status().isOk());
+
+        verify(orderService).cancel(orderId);
+    }
+
+    @Test
+    @WithMockUser(roles = "OPERADOR")
     void updateStatusShouldReturn200() throws Exception {
         OrderStatusUpdateRequest request =
                 new OrderStatusUpdateRequest(OrderStateEnum.CREADO);

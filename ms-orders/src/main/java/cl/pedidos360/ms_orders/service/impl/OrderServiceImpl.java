@@ -303,7 +303,10 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * Cancela una orden perteneciente al usuario autenticado.
+     * Cancela una orden.
+     *
+     * <p>Un cliente solo puede cancelar sus propias órdenes, mientras que
+     * un operador o administrador puede cancelar cualquier orden.</p>
      *
      * <p>Solo permite cancelar órdenes que se encuentren en estado
      * {@link OrderStateEnum#CREADO}. Si la orden tiene otro estado,
@@ -319,16 +322,19 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse cancel(UUID orderId) {
-        UUID clientId = currentUserProvider.getCurrentUserId();
+        boolean staff = isStaff();
+        UUID clientId = staff ? null : currentUserProvider.getCurrentUserId();
 
         log.info(
-                "Solicitud de cancelación | orderId={} | clientId={}",
+                "Solicitud de cancelación | orderId={} | clientId={} | staff={}",
                 orderId,
-                clientId
+                clientId,
+                staff
         );
 
-        OrderEntity order = orderRepository
-                .findByIdAndClientId(orderId, clientId)
+        OrderEntity order = (staff
+                ? orderRepository.findById(orderId)
+                : orderRepository.findByIdAndClientId(orderId, clientId))
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "La orden solicitada no existe."
                 ));
@@ -349,7 +355,7 @@ public class OrderServiceImpl implements OrderService {
 
         OrderEntity savedOrder = orderRepository.save(order);
 
-        log.info("Orden cancelada | orderId={} | clientId={}", orderId, clientId);
+        log.info("Orden cancelada | orderId={} | clientId={}", orderId, order.getClientId());
 
         return orderMapper.toResponse(savedOrder);
     }

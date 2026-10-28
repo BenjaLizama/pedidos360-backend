@@ -6,6 +6,7 @@ import cl.eventpass.bff.dto.request.OrderCreateRequest;
 import cl.eventpass.bff.dto.request.OrderStatusUpdateRequest;
 import cl.eventpass.bff.dto.response.DashboardSummaryResponse;
 import cl.eventpass.bff.dto.response.OrderResponse;
+import cl.eventpass.bff.dto.response.PageResponse;
 import cl.eventpass.bff.dto.response.StandardResponse;
 import cl.eventpass.bff.enums.OrderStateEnum;
 
@@ -13,7 +14,6 @@ import jakarta.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -66,7 +66,7 @@ public class OrderController implements OrderControllerDocs {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     @ResponseStatus(HttpStatus.OK)
-    public StandardResponse<Page<OrderResponse>> findAll(
+    public StandardResponse<PageResponse<OrderResponse>> findAll(
             @RequestParam(required = false) UUID customerId,
             @RequestParam(required = false) OrderStateEnum status,
             @PageableDefault(size = 20) Pageable pageable
@@ -84,7 +84,7 @@ public class OrderController implements OrderControllerDocs {
     @GetMapping("/me")
     @PreAuthorize("hasRole('CLIENTE')")
     @ResponseStatus(HttpStatus.OK)
-    public StandardResponse<Page<OrderResponse>> findMyOrders(
+    public StandardResponse<PageResponse<OrderResponse>> findMyOrders(
             @PageableDefault(size = 20) Pageable pageable
     ) {
         return ordersClient.findMyOrders(pageable);

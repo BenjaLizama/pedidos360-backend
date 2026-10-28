@@ -5,13 +5,13 @@ import cl.eventpass.bff.dto.request.OrderCreateRequest;
 import cl.eventpass.bff.dto.request.OrderStatusUpdateRequest;
 import cl.eventpass.bff.dto.response.DashboardSummaryResponse;
 import cl.eventpass.bff.dto.response.OrderResponse;
+import cl.eventpass.bff.dto.response.PageResponse;
 import cl.eventpass.bff.dto.response.StandardResponse;
 import cl.eventpass.bff.enums.OrderStateEnum;
 import cl.eventpass.bff.security.CurrentAuthorizationProvider;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -54,7 +54,7 @@ public class OrdersClient {
                 .body(new ParameterizedTypeReference<>() {});
     }
 
-    public StandardResponse<Page<OrderResponse>> findAll(
+    public StandardResponse<PageResponse<OrderResponse>> findAll(
             UUID customerId,
             OrderStateEnum status,
             Pageable pageable
@@ -80,7 +80,7 @@ public class OrdersClient {
                 .body(new ParameterizedTypeReference<>() {});
     }
 
-    public StandardResponse<Page<OrderResponse>> findMyOrders(
+    public StandardResponse<PageResponse<OrderResponse>> findMyOrders(
             Pageable pageable
     ) {
         return ordersRestClient.get()

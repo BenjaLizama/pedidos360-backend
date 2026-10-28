@@ -421,6 +421,39 @@ class OrderServiceImplTest {
         verify(orderMapper).toResponse(order);
     }
 
+    @Test
+    void cancel_whenUserIsStaff_cancelsAnyOrderWithoutOwnershipCheck() {
+        authenticateAs("ROLE_OPERADOR");
+
+        OrderEntity order = orderWithStatus(OrderStateEnum.CREADO);
+        OrderResponse expected = mock(OrderResponse.class);
+
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderRepository.save(order)).thenReturn(order);
+        when(orderMapper.toResponse(order)).thenReturn(expected);
+
+        OrderResponse result = orderService.cancel(orderId);
+
+        assertSame(expected, result);
+        assertEquals(OrderStateEnum.CANCELADO, order.getOrderState());
+        verify(orderRepository).findById(orderId);
+        verify(orderRepository, never()).findByIdAndClientId(any(), any());
+        verify(currentUserProvider, never()).getCurrentUserId();
+    }
+
+    @Test
+    void cancel_whenStaffAndOrderDoesNotExist_throwsNotFound() {
+        authenticateAs("ROLE_ADMINISTRADOR");
+        when(orderRepository.findById(orderId)).thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> orderService.cancel(orderId)
+        );
+
+        verify(orderRepository, never()).save(any());
+    }
+
     // ---------------------------------------------------------------------
     // updateStatus / accept
     // ---------------------------------------------------------------------
