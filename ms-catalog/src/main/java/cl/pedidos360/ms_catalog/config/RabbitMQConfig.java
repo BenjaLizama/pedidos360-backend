@@ -1,92 +1,70 @@
 package cl.pedidos360.ms_catalog.config;
 
-import org.springframework.amqp.core.Binding;
-import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.DirectExchange;
-import org.springframework.amqp.core.Queue;
-import org.springframework.amqp.core.QueueBuilder;
-import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitMQConfig {
 
-    public static final String ORDERS_EXCHANGE = "orders.exchange";
+    // Nombres de Exchange, Queue y Routing Key Principales
+    public static final String MAIN_EXCHANGE = "orders.exchange";
+    public static final String MAIN_QUEUE = "catalog.order-created.queue";
     public static final String ROUTING_KEY = "order.created";
-    public static final String CATALOG_QUEUE = "catalog.order-created.queue";
 
+    // Nombres de DLX, DLQ y Routing Key de Mensajes Fallidos
     public static final String DLX_EXCHANGE = "orders.dlx";
+    public static final String DLQ_QUEUE = "catalog.order-created.dlq";
     public static final String DLQ_ROUTING_KEY = "order.created.dead";
-    public static final String CATALOG_DLQ = "catalog.order-created.dlq";
 
-    /**
-     * Exchange principal para los eventos de pedidos.
-     */
+    // =========================================================================
+    // CONFIGURACIÓN DE COLA PRINCIPAL
+    // =========================================================================
+
     @Bean
-    public DirectExchange ordersExchange() {
-        return new DirectExchange(ORDERS_EXCHANGE, true, false);
+    public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
+        RabbitAdmin admin = new RabbitAdmin(connectionFactory);
+        admin.setAutoStartup(true);
+        return admin;
     }
 
-    /**
-     * Exchange para mensajes rechazados por fallos de procesamiento.
-     */
     @Bean
-    public DirectExchange deadLetterExchange() {
-        return new DirectExchange(DLX_EXCHANGE, true, false);
-    }
-
-    /**
-     * Cola principal. Los mensajes rechazados se envían a la DLQ.
-     */
-    @Bean
-    public Queue catalogOrderCreatedQueue() {
-        return QueueBuilder.durable(CATALOG_QUEUE)
-                .deadLetterExchange(DLX_EXCHANGE)
-                .deadLetterRoutingKey(DLQ_ROUTING_KEY)
+    public Queue mainQueue() {
+        return QueueBuilder.durable(MAIN_QUEUE)
+                // Redirige mensajes rechazados o fallidos hacia la DLX
+                .withArgument("x-dead-letter-exchange", DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", DLQ_ROUTING_KEY)
                 .build();
     }
 
-    /**
-     * Cola durable para los mensajes que no pudieron procesarse.
-     */
     @Bean
-    public Queue catalogOrderCreatedDlq() {
-        return QueueBuilder.durable(CATALOG_DLQ).build();
+    public TopicExchange mainExchange() {
+        return new TopicExchange(MAIN_EXCHANGE);
     }
 
-    /**
-     * Vincula la cola principal al exchange de pedidos.
-     */
     @Bean
-    public Binding catalogOrderCreatedBinding(
-            @Qualifier("catalogOrderCreatedQueue") Queue queue,
-            @Qualifier("ordersExchange") DirectExchange exchange
-    ) {
-        return BindingBuilder.bind(queue)
-                .to(exchange)
-                .with(ROUTING_KEY);
+    public Binding mainBinding(Queue mainQueue, TopicExchange mainExchange) {
+        return BindingBuilder.bind(mainQueue).to(mainExchange).with(ROUTING_KEY);
     }
 
-    /**
-     * Vincula la DLQ al exchange de mensajes fallidos.
-     */
+    // =========================================================================
+    // CONFIGURACIÓN DE DEAD LETTER EXCHANGE (DLX) Y DEAD LETTER QUEUE (DLQ)
+    // =========================================================================
+
     @Bean
-    public Binding catalogOrderCreatedDlqBinding(
-            @Qualifier("catalogOrderCreatedDlq") Queue queue,
-            @Qualifier("deadLetterExchange") DirectExchange exchange
-    ) {
-        return BindingBuilder.bind(queue)
-                .to(exchange)
-                .with(DLQ_ROUTING_KEY);
+    public DirectExchange deadLetterExchange() {
+        return new DirectExchange(DLX_EXCHANGE);
     }
 
-    /**
-     * Conversor JSON para los eventos recibidos por RabbitMQ.
-     */
     @Bean
-    public JacksonJsonMessageConverter jsonMessageConverter() {
-        return new JacksonJsonMessageConverter();
+    public Queue deadLetterQueue() {
+        return QueueBuilder.durable(DLQ_QUEUE).build();
+    }
+
+    @Bean
+    public Binding deadLetterBinding(Queue deadLetterQueue, DirectExchange deadLetterExchange) {
+        return BindingBuilder.bind(deadLetterQueue).to(deadLetterExchange).with(DLQ_ROUTING_KEY);
     }
 }
