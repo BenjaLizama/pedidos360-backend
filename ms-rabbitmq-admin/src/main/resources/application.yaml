@@ -10,7 +10,11 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://localhost:8080/realms/pedidos360/protocol/openid-connect/certs
+          jwk-set-uri: ${JWT_SET_URI:http://localhost:8080/realms/pedidos360/protocol/openid-connect/certs}
+security:
+  jwt:
+    roles-claim: ${JWT_ROLES_CLAIM:realm_access.roles}
+    roles-prefix: ${JWT_ROLES_PREFIX:ROLE_}
 server:
   port: 8085
 management:
@@ -22,7 +26,6 @@ management:
     health:
       probes:
         enabled: true
-      show-details: when_authorized
 springdoc:
   api-docs:
     path: /v3/api-docs

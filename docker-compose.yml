@@ -350,6 +350,8 @@ services:
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-admin}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASS:-admin123}
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: ${JWT_SET_URI:-http://keycloak:8080/realms/pedidos360/protocol/openid-connect/certs}
+      JWT_ROLES_CLAIM: ${JWT_ROLES_CLAIM:-realm_access.roles}
+      JWT_ROLES_PREFIX: ${JWT_ROLES_PREFIX:-ROLE_}
     ports:
       - "${RABBITMQ_ADMIN_HOST_PORT:-8085}:8085"
     depends_on:
