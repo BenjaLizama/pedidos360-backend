@@ -14,21 +14,50 @@ import java.io.IOException;
 @Component
 public class NotificationConsumer {
 
+    private static final int MAX_ATTEMPTS = 3;
+
     @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_QUEUE)
     public void handleOrderAcceptedNotification(
             OrderAcceptedEvent event,
             Message message,
             Channel channel
     ) throws IOException {
+        long deliveryTag = message.getMessageProperties().getDeliveryTag();
+
+        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+                validate(event);
+                log.info("Notification processed | orderId={} | itemCount={}",
+                        event.orderId(), event.items().size());
+                channel.basicAck(deliveryTag, false);
+                return;
+            } catch (RuntimeException exception) {
+                if (attempt == MAX_ATTEMPTS) {
+                    log.error("Notification failed after {} attempts; routing to DLQ | orderId={}",
+                            MAX_ATTEMPTS, event == null ? null : event.orderId(), exception);
+                    channel.basicNack(deliveryTag, false, false);
+                    return;
+                }
+
+                log.warn("Notification attempt {}/{} failed; retrying | orderId={}",
+                        attempt, MAX_ATTEMPTS, event == null ? null : event.orderId(), exception);
+                if (!waitBeforeRetry(attempt * 1000L)) {
+                    log.warn("Notification retry interrupted; routing to DLQ | orderId={}",
+                            event == null ? null : event.orderId());
+                    channel.basicNack(deliveryTag, false, false);
+                    return;
+                }
+            }
+        }
+    }
+
+    private static boolean waitBeforeRetry(long delayMillis) {
         try {
-            validate(event);
-            log.info("Notification processed | orderId={} | itemCount={}",
-                    event.orderId(), event.items().size());
-            channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
-        } catch (RuntimeException exception) {
-            log.error("Notification event failed; retrying and then routing to DLQ | orderId={}",
-                    event == null ? null : event.orderId(), exception);
-            throw exception;
+            Thread.sleep(delayMillis);
+            return true;
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            return false;
         }
     }
 
