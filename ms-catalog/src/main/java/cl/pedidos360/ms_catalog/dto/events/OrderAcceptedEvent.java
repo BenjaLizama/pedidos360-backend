@@ -1,9 +1,9 @@
-package cl.pedidos360.ms_orders.dto.events;
+package cl.pedidos360.ms_catalog.dto.events;
 
 import java.util.List;
 import java.util.UUID;
 
-public record OrderCreatedEvent(
+public record OrderAcceptedEvent(
         UUID eventId,
         UUID orderId,
         List<OrderItemEvent> items

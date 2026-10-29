@@ -19,21 +19,18 @@ spring:
     listener:
       simple:
         acknowledge-mode: manual # Garantía de procesamiento crítico
+        default-requeue-rejected: false
         prefetch: 1 # Distribución equitativa de carga (Fair Dispatch)
-        retry:
-          enabled: true # Reintentos con Backoff antes de enviar a la DLQ
-          initial-interval: 1000
-          multiplier: 2.0
-          max-attempts: 3
 
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
 
-jwt:
-  roles-claim: ${JWT_ROLES_CLAIM:realm_access.roles}
-  roles-prefix: ${JWT_ROLES_PREFIX:ROLE_}
+security:
+  jwt:
+    roles-claim: ${JWT_ROLES_CLAIM:realm_access.roles}
+    roles-prefix: ${JWT_ROLES_PREFIX:ROLE_}
 
 server:
   port: ${SERVER_PORT:8084}

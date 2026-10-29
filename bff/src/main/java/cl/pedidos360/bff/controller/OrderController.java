@@ -6,6 +6,7 @@ import cl.pedidos360.bff.dto.request.OrderCreateRequest;
 import cl.pedidos360.bff.dto.request.OrderStatusUpdateRequest;
 import cl.pedidos360.bff.dto.response.DashboardSummaryResponse;
 import cl.pedidos360.bff.dto.response.OrderResponse;
+import cl.pedidos360.bff.dto.response.PageResponse;
 import cl.pedidos360.bff.dto.response.StandardResponse;
 import cl.pedidos360.bff.enums.OrderStateEnum;
 
@@ -13,7 +14,6 @@ import jakarta.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -41,9 +41,6 @@ public class OrderController implements OrderControllerDocs {
     /**
      * Crea un pedido para el usuario autenticado.
      *
-     * La creación y la publicación del evento son responsabilidad
-     * de ms-orders.
-     *
      * @param request datos necesarios para crear el pedido
      * @return respuesta con el pedido creado
      */
@@ -59,12 +56,17 @@ public class OrderController implements OrderControllerDocs {
 
     /**
      * Obtiene pedidos con filtros opcionales de cliente y estado.
+     *
+     * @param customerId identificador del cliente
+     * @param status estado del pedido
+     * @param pageable parámetros de paginación y ordenamiento
+     * @return página de pedidos
      */
     @Override
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'OPERADOR')")
     @ResponseStatus(HttpStatus.OK)
-    public StandardResponse<Page<OrderResponse>> findAll(
+    public StandardResponse<PageResponse<OrderResponse>> findAll(
             @RequestParam(required = false) UUID customerId,
             @RequestParam(required = false) OrderStateEnum status,
             @PageableDefault(size = 20) Pageable pageable
@@ -74,12 +76,15 @@ public class OrderController implements OrderControllerDocs {
 
     /**
      * Obtiene los pedidos del usuario autenticado.
+     *
+     * @param pageable parámetros de paginación y ordenamiento
+     * @return página de pedidos del usuario actual
      */
     @Override
     @GetMapping("/me")
     @PreAuthorize("hasRole('CLIENTE')")
     @ResponseStatus(HttpStatus.OK)
-    public StandardResponse<Page<OrderResponse>> findMyOrders(
+    public StandardResponse<PageResponse<OrderResponse>> findMyOrders(
             @PageableDefault(size = 20) Pageable pageable
     ) {
         return ordersClient.findMyOrders(pageable);
@@ -87,6 +92,9 @@ public class OrderController implements OrderControllerDocs {
 
     /**
      * Busca un pedido por su identificador.
+     *
+     * @param orderId identificador del pedido
+     * @return pedido encontrado
      */
     @Override
     @GetMapping("/{orderId}")
@@ -100,6 +108,9 @@ public class OrderController implements OrderControllerDocs {
 
     /**
      * Cancela un pedido.
+     *
+     * @param orderId identificador del pedido
+     * @return pedido actualizado
      */
     @Override
     @PatchMapping("/{orderId}/cancel")
@@ -113,6 +124,10 @@ public class OrderController implements OrderControllerDocs {
 
     /**
      * Actualiza el estado de un pedido.
+     *
+     * @param orderId identificador del pedido
+     * @param request nuevo estado solicitado
+     * @return pedido actualizado
      */
     @Override
     @PutMapping("/{orderId}/status")
@@ -127,6 +142,9 @@ public class OrderController implements OrderControllerDocs {
 
     /**
      * Acepta un pedido.
+     *
+     * @param orderId identificador del pedido
+     * @return pedido aceptado
      */
     @Override
     @PatchMapping("/{orderId}/accept")
@@ -140,6 +158,8 @@ public class OrderController implements OrderControllerDocs {
 
     /**
      * Obtiene el resumen del dashboard de pedidos.
+     *
+     * @return resumen de pedidos
      */
     @Override
     @GetMapping("/dashboard/summary")

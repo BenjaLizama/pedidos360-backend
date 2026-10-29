@@ -11,6 +11,8 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.transaction.TransactionSystemException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -382,6 +384,56 @@ public class GlobalExceptionHandler {
                 ErrorCode.INTERNAL_SERVER_ERROR,
                 "No fue posible completar la operación debido a un error "
                         + "en la transacción.",
+                request
+        );
+    }
+
+    /**
+     * Maneja los errores de autorización producidos por reglas de acceso
+     * a nivel de método o de servicio.
+     *
+     * <p>Devuelve una respuesta HTTP 403 (Forbidden) en lugar de tratarlos
+     * como errores internos.</p>
+     *
+     * @param exception excepción que indica acceso denegado.
+     * @param request solicitud HTTP en la que se produjo el error.
+     * @return respuesta estandarizada con estado HTTP 403.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<StandardErrorResponse> handleAccessDenied(
+            AccessDeniedException exception,
+            HttpServletRequest request
+    ) {
+        return accessDeniedResponse(exception, request);
+    }
+
+    /**
+     * Maneja las denegaciones emitidas por la autorización de métodos
+     * (por ejemplo, las reglas {@code @PreAuthorize} de Spring Security 7).
+     */
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<StandardErrorResponse> handleAuthorizationDenied(
+            AuthorizationDeniedException exception,
+            HttpServletRequest request
+    ) {
+        return accessDeniedResponse(exception, request);
+    }
+
+    private ResponseEntity<StandardErrorResponse> accessDeniedResponse(
+            RuntimeException exception,
+            HttpServletRequest request
+    ) {
+        log.warn(
+                "Acceso denegado | path={} | method={} | message={}",
+                request.getRequestURI(),
+                request.getMethod(),
+                exception.getMessage()
+        );
+
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                ErrorCode.ACCESS_DENIED,
+                "No tiene permiso para acceder a este recurso.",
                 request
         );
     }

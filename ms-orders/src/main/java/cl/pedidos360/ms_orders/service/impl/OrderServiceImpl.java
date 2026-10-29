@@ -1,7 +1,7 @@
 package cl.pedidos360.ms_orders.service.impl;
 
 import cl.pedidos360.ms_orders.client.CatalogClient;
-import cl.pedidos360.ms_orders.dto.events.OrderCreatedEvent;
+import cl.pedidos360.ms_orders.dto.events.OrderAcceptedEvent;
 import cl.pedidos360.ms_orders.dto.request.OrderCreateRequest;
 import cl.pedidos360.ms_orders.dto.request.OrderItemRequest;
 import cl.pedidos360.ms_orders.dto.response.DashboardSummaryResponse;
@@ -191,10 +191,12 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse cancel(UUID orderId) {
-        UUID clientId = currentUserProvider.getCurrentUserId();
+        boolean staff = isStaff();
+        UUID clientId = staff ? null : currentUserProvider.getCurrentUserId();
 
-        OrderEntity order = orderRepository
-                .findByIdAndClientId(orderId, clientId)
+        OrderEntity order = (staff
+                ? orderRepository.findById(orderId)
+                : orderRepository.findByIdAndClientId(orderId, clientId))
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "La orden solicitada no existe."
                 ));
@@ -293,18 +295,21 @@ public class OrderServiceImpl implements OrderService {
         );
 
         if (newStatus == OrderStateEnum.ACEPTADO) {
-            OrderCreatedEvent event = new OrderCreatedEvent(
+            OrderAcceptedEvent event = new OrderAcceptedEvent(
                     UUID.randomUUID(),
                     savedOrder.getId(),
                     savedOrder.getItems().stream()
-                            .map(item -> new OrderCreatedEvent.OrderItemEvent(
+                            .map(item -> new OrderAcceptedEvent.OrderItemEvent(
                                     item.getProductId(),
                                     item.getQuantity()
                             ))
                             .toList()
             );
-            orderPublisherService.publishOrderCreated(event);
-            log.info("Evento order.created publicado exitosamente tras aceptación | orderId={}", savedOrder.getId());
+            orderPublisherService.publishOrderAccepted(event);
+            log.info(
+                    "Evento order.accepted publicado exitosamente tras aceptación | orderId={}",
+                    savedOrder.getId()
+            );
         }
 
         return orderMapper.toResponse(savedOrder);

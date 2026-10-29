@@ -6,6 +6,7 @@ import cl.pedidos360.bff.dto.request.OrderCreateRequest;
 import cl.pedidos360.bff.dto.request.OrderStatusUpdateRequest;
 import cl.pedidos360.bff.dto.response.DashboardSummaryResponse;
 import cl.pedidos360.bff.dto.response.OrderResponse;
+import cl.pedidos360.bff.dto.response.PageResponse;
 import cl.pedidos360.bff.dto.response.StandardResponse;
 import cl.pedidos360.bff.enums.OrderStateEnum;
 
@@ -21,7 +22,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -127,7 +127,7 @@ public interface OrderControllerDocs {
                     in = ParameterIn.QUERY
             )
     })
-    StandardResponse<Page<OrderResponse>> findAll(
+    StandardResponse<PageResponse<OrderResponse>> findAll(
             @RequestParam(required = false)
             UUID customerId,
 
@@ -164,7 +164,7 @@ public interface OrderControllerDocs {
                     description = "El usuario no tiene permisos para consultar sus órdenes"
             )
     })
-    StandardResponse<Page<OrderResponse>> findMyOrders(
+    StandardResponse<PageResponse<OrderResponse>> findMyOrders(
             @ParameterObject
             Pageable pageable
     );

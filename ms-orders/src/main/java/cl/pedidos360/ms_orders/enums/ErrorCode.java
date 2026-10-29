@@ -48,5 +48,11 @@ public enum ErrorCode {
      * después de haber sido leído, provocando un conflicto
      * de concurrencia optimista.
      */
-    OPTIMISTIC_LOCK_CONFLICT
+    OPTIMISTIC_LOCK_CONFLICT,
+
+    /**
+     * El usuario autenticado no tiene permisos para realizar
+     * la operación solicitada.
+     */
+    ACCESS_DENIED
 }

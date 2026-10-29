@@ -1,6 +1,6 @@
 package cl.pedidos360.ms_catalog.service.impl;
 
-import cl.pedidos360.ms_catalog.dto.events.OrderCreatedEvent;
+import cl.pedidos360.ms_catalog.dto.events.OrderAcceptedEvent;
 import cl.pedidos360.ms_catalog.dto.request.ProductStockReductionItemRequest;
 import cl.pedidos360.ms_catalog.entity.ProcessedOrderEventEntity;
 import cl.pedidos360.ms_catalog.repository.ProcessedOrderEventRepository;
@@ -28,7 +28,7 @@ public class OrderEventTransactionalProcessor {
      */
     @Transactional(transactionManager = "transactionManager")
     public boolean process(
-            OrderCreatedEvent event,
+            OrderAcceptedEvent event,
             List<ProductStockReductionItemRequest> items
     ) {
         if (processedEventRepository.existsById(event.eventId())) {

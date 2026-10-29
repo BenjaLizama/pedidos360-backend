@@ -11,7 +11,6 @@ import cl.pedidos360.bff.dto.request.ProductStatusUpdateRequest;
 import cl.pedidos360.bff.dto.request.ProductStockUpdateRequest;
 import cl.pedidos360.bff.dto.request.ProductUpdateRequest;
 import cl.pedidos360.bff.dto.response.*;
-import cl.pedidos360.bff.dto.response.*;
 import cl.pedidos360.bff.security.CurrentAuthorizationProvider;
 
 import org.springframework.beans.factory.annotation.Qualifier;

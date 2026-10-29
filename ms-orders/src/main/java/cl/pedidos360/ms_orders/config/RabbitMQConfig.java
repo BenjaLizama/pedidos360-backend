@@ -13,7 +13,7 @@ public class RabbitMQConfig {
 
     // Exchange principal compartido por los microservicios
     public static final String ORDERS_EXCHANGE = "orders.exchange";
-    public static final String ORDERS_ROUTING_KEY = "order.created";
+    public static final String ORDERS_ROUTING_KEY = "order.accepted";
 
     // Cola de notificaciones y su DLQ
     public static final String NOTIFICATION_QUEUE =
@@ -23,12 +23,17 @@ public class RabbitMQConfig {
     public static final String NOTIFICATION_DLK =
             "order.notification.dead";
 
+    // Audit consumer queue and dead-letter queue
+    public static final String AUDIT_QUEUE = "orders.audit.queue";
+    public static final String AUDIT_DLQ = "orders.audit.dlq";
+    public static final String AUDIT_DLK = "order.audit.dead";
+
     // Exchange común de mensajes fallidos
     public static final String DLX_EXCHANGE = "orders.dlx";
 
     @Bean
     public TopicExchange ordersExchange() {
-        return new TopicExchange("orders.exchange", true, false);
+        return new TopicExchange(ORDERS_EXCHANGE, true, false);
     }
 
     @Bean
@@ -71,6 +76,40 @@ public class RabbitMQConfig {
                 .to(exchange)
                 .with(NOTIFICATION_DLK);
     }
+    @Bean
+    public Queue auditQueue() {
+        return QueueBuilder.durable(AUDIT_QUEUE)
+                .withArgument("x-dead-letter-exchange", DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", AUDIT_DLK)
+                .build();
+    }
+
+    @Bean
+    public Queue auditDeadLetterQueue() {
+        return QueueBuilder.durable(AUDIT_DLQ).build();
+    }
+
+    @Bean
+    public Binding auditBinding(
+            @Qualifier("auditQueue") Queue queue,
+            @Qualifier("ordersExchange") TopicExchange exchange
+    ) {
+        return BindingBuilder.bind(queue)
+                .to(exchange)
+                .with(ORDERS_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding auditDeadLetterBinding(
+            @Qualifier("auditDeadLetterQueue") Queue queue,
+            @Qualifier("deadLetterExchange") DirectExchange exchange
+    ) {
+        return BindingBuilder.bind(queue)
+                .to(exchange)
+                .with(AUDIT_DLK);
+    }
+
+
 
     @Bean
     public MessageConverter jsonMessageConverter() {

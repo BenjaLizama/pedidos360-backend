@@ -1,7 +1,7 @@
 package cl.pedidos360.ms_orders.service;
 
 import cl.pedidos360.ms_orders.config.RabbitMQConfig;
-import cl.pedidos360.ms_orders.dto.events.OrderCreatedEvent;
+import cl.pedidos360.ms_orders.dto.events.OrderAcceptedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -14,9 +14,9 @@ public class OrderPublisherService {
 
     private final RabbitTemplate rabbitTemplate;
 
-    public void publishOrderCreated(OrderCreatedEvent event) {
+    public void publishOrderAccepted(OrderAcceptedEvent event) {
         log.info(
-                "Publicando order.created | eventId={} | orderId={}",
+                "Publicando order.accepted | eventId={} | orderId={}",
                 event.eventId(),
                 event.orderId()
         );

@@ -13,7 +13,7 @@ public class RabbitMQConfig {
 
     // Exchange principal compartido
     public static final String MAIN_EXCHANGE = "orders.exchange";
-    public static final String ROUTING_KEY = "order.created";
+    public static final String ROUTING_KEY = "order.accepted";
 
     // Cola de catálogo y su DLQ
     public static final String MAIN_QUEUE =
@@ -21,7 +21,7 @@ public class RabbitMQConfig {
     public static final String DLQ_QUEUE =
             "catalog.order-created.dlq";
     public static final String DLQ_ROUTING_KEY =
-            "order.created.dead";
+            "order.accepted.dead";
 
     // Exchange común de mensajes fallidos
     public static final String DLX_EXCHANGE = "orders.dlx";
