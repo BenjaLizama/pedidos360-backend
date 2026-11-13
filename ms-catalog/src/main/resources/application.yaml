@@ -10,3 +10,15 @@ spring:
       resourceserver:
         jwt:
           jwk-set-uri: ${JWT_SET_URI}
+
+  rabbitmq:
+    listener:
+      simple:
+        acknowledge-mode: auto
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1000
+          multiplier: 2.0
+          max-interval: 5000

@@ -12,6 +12,12 @@ spring:
     virtual:
       enabled: true
 
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:admin}
+    password: ${RABBITMQ_PASS:admin123}
+
 # ==================================================
 # SERVIDOR
 # ==================================================
@@ -37,9 +43,11 @@ management:
       enabled: false
 
 # ==================================================
-# CLIENTES HTTP
+# CLIENTES HTTP Y CORS
 # ==================================================
 app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   clients:
     catalog:
       connect-timeout: ${CATALOG_CONNECT_TIMEOUT:3s}

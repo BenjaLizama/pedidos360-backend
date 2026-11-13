@@ -23,8 +23,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClientException;
+import cl.pedidos360.ms_orders.service.OrderPublisherService;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -33,7 +33,6 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 class OrderServiceImplTest {
@@ -43,6 +42,7 @@ class OrderServiceImplTest {
     private CurrentUserProvider currentUserProvider;
     private CatalogClient catalogClient;
     private OrderServiceImpl orderService;
+    private OrderPublisherService orderPublisherService;
 
     private UUID clientId;
     private UUID orderId;
@@ -53,12 +53,14 @@ class OrderServiceImplTest {
         orderMapper = mock(OrderMapper.class);
         currentUserProvider = mock(CurrentUserProvider.class);
         catalogClient = mock(CatalogClient.class);
+        orderPublisherService = mock(OrderPublisherService.class);
 
         orderService = new OrderServiceImpl(
                 orderRepository,
                 orderMapper,
                 currentUserProvider,
-                catalogClient
+                catalogClient,
+                orderPublisherService
         );
 
         clientId = UUID.randomUUID();
@@ -132,6 +134,8 @@ class OrderServiceImplTest {
 
         verify(catalogClient).findById(productId);
         verify(orderMapper).toResponse(savedOrder);
+
+        verifyNoInteractions(orderPublisherService);
     }
 
     @Test
@@ -421,6 +425,39 @@ class OrderServiceImplTest {
         verify(orderMapper).toResponse(order);
     }
 
+    @Test
+    void cancel_whenUserIsStaff_cancelsAnyOrderWithoutOwnershipCheck() {
+        authenticateAs("ROLE_OPERADOR");
+
+        OrderEntity order = orderWithStatus(OrderStateEnum.CREADO);
+        OrderResponse expected = mock(OrderResponse.class);
+
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderRepository.save(order)).thenReturn(order);
+        when(orderMapper.toResponse(order)).thenReturn(expected);
+
+        OrderResponse result = orderService.cancel(orderId);
+
+        assertSame(expected, result);
+        assertEquals(OrderStateEnum.CANCELADO, order.getOrderState());
+        verify(orderRepository).findById(orderId);
+        verify(orderRepository, never()).findByIdAndClientId(any(), any());
+        verify(currentUserProvider, never()).getCurrentUserId();
+    }
+
+    @Test
+    void cancel_whenStaffAndOrderDoesNotExist_throwsNotFound() {
+        authenticateAs("ROLE_ADMINISTRADOR");
+        when(orderRepository.findById(orderId)).thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> orderService.cancel(orderId)
+        );
+
+        verify(orderRepository, never()).save(any());
+    }
+
     // ---------------------------------------------------------------------
     // updateStatus / accept
     // ---------------------------------------------------------------------
@@ -482,8 +519,9 @@ class OrderServiceImplTest {
         verify(orderRepository, never()).save(any());
     }
 
+
     @Test
-    void updateStatus_whenMovingFromCreatedToAccepted_reducesStockAndSaves() {
+    void updateStatus_whenMovingFromCreatedToAccepted_savesNewStatusWithoutReducingStockDirectly() {
         authenticateAs("ROLE_ADMINISTRADOR");
 
         OrderEntity order = orderWithStatus(OrderStateEnum.CREADO);
@@ -498,27 +536,13 @@ class OrderServiceImplTest {
 
         assertSame(expected, result);
         assertEquals(OrderStateEnum.ACEPTADO, order.getOrderState());
-        verify(catalogClient).reduceStock(anyList());
+
         verify(orderRepository).save(order);
         verify(orderMapper).toResponse(order);
-    }
-
-    @Test
-    void updateStatus_whenAcceptingAndCatalogFails_throwsInvalidOperation() {
-        authenticateAs("ROLE_ADMINISTRADOR");
-
-        OrderEntity order = orderWithStatus(OrderStateEnum.CREADO);
-        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
-        doThrow(new RestClientException("Catalog unavailable"))
-                .when(catalogClient).reduceStock(anyList());
-
-        assertThrows(
-                InvalidOperationException.class,
-                () -> orderService.updateStatus(orderId, OrderStateEnum.ACEPTADO)
+        verifyNoInteractions(catalogClient);
+        verify(orderPublisherService).publishOrderAccepted(
+                any(cl.pedidos360.ms_orders.dto.events.OrderAcceptedEvent.class)
         );
-
-        verify(catalogClient).reduceStock(anyList());
-        verify(orderRepository, never()).save(any());
     }
 
     @Test
@@ -599,23 +623,36 @@ class OrderServiceImplTest {
         verify(orderRepository, never()).save(any());
     }
 
+
     @Test
     void accept_delegatesToUpdateStatus() {
         authenticateAs("ROLE_ADMINISTRADOR");
 
         OrderEntity order = orderWithStatus(OrderStateEnum.CREADO);
-        ReflectionTestUtils.setField(order, "id", orderId);
+        OrderResponse expected = mock(OrderResponse.class);
 
-        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
-        when(orderRepository.save(any(OrderEntity.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(orderRepository.findById(orderId))
+                .thenReturn(Optional.of(order));
 
-        orderService.accept(orderId);
+        when(orderRepository.save(order))
+                .thenReturn(order);
 
+        when(orderMapper.toResponse(order))
+                .thenReturn(expected);
+
+        OrderResponse response = orderService.accept(orderId);
+
+        assertSame(expected, response);
         assertEquals(OrderStateEnum.ACEPTADO, order.getOrderState());
+
         verify(orderRepository).findById(orderId);
         verify(orderRepository).save(order);
-        verify(catalogClient).reduceStock(anyList());
+        verify(orderMapper).toResponse(order);
+
+        verifyNoInteractions(catalogClient);
+        verify(orderPublisherService).publishOrderAccepted(
+                any(cl.pedidos360.ms_orders.dto.events.OrderAcceptedEvent.class)
+        );
     }
 
     // ---------------------------------------------------------------------

@@ -122,7 +122,7 @@ public class OrderController implements OrderControllerDocs {
 
     @Override
     @PatchMapping("/{orderId}/cancel")
-    @PreAuthorize("hasRole('CLIENTE')")
+    @PreAuthorize("hasAnyRole('CLIENTE', 'OPERADOR', 'ADMINISTRADOR')")
     public ResponseEntity<StandardResponse<OrderResponse>> cancel(
             @PathVariable("orderId") UUID orderId
     ) {
