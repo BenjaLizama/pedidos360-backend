@@ -7,6 +7,8 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - pedidos360-network
 
   # ==================================================
   # KAFKA
@@ -32,6 +34,16 @@ services:
       KAFKA_LOG_RETENTION_BYTES: 52428800
       # Verificar logs para borrar cada 1 minuto
       KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 60000
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - kafka-broker-api-versions --bootstrap-server localhost:29092
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    networks:
+      - pedidos360-network
 
   # ==================================================
   # KAFKA UI
@@ -41,11 +53,13 @@ services:
     depends_on:
       - kafka
     ports:
-      - "8086:8086"
+      - "8086:8080"
     environment:
-      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_NAME: pedidos360
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - pedidos360-network
 
   # ==================================================
   # RABBITMQ CLUSTER - NODO MAESTRO
@@ -317,6 +331,8 @@ services:
       ORDER_CREATED_QUEUE: "orders-created"
       ORDER_STATUS_UPDATED_QUEUE: "orders-status-updated"
 
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+
     ports:
       - "${ORDERS_HOST_PORT:-8082}:8082"
     depends_on:
@@ -329,6 +345,8 @@ services:
       rabbitmq-master:
         condition: service_healthy
       rabbitmq-slave:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     networks:
       - pedidos360-network
