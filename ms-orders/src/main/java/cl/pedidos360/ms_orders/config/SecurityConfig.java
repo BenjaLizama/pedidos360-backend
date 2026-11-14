@@ -79,7 +79,7 @@ public class SecurityConfig {
             "/actuator/info",
             "/swagger-ui/**",
             "/swagger-ui.html",
-            "/v3/api-docs/**"
+            "/v3/api-docs/**",
     };
 
     /**
@@ -89,7 +89,7 @@ public class SecurityConfig {
      * no se habilitan rutas de órdenes mediante esta lista para acceso público.</p>
      */
     private static final String[] PUBLIC_ORDER_URL = {
-
+            "/api/test/**"
     };
 
     /**
